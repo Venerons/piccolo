@@ -75,44 +75,7 @@ if (action === '--rehash' || action === '-r') {
 	##    ##  ##       ##     ## ##     ## ##    ## ##     ##
 	##     ## ######## ##     ## ##     ##  ######  ##     ##
 	*/
-	console.log('Rehashing');
-	var bar;
-	if (ProgressBar) {
-		bar = new ProgressBar(':percent :etas [:bar]', {
-			complete: '=',
-			incomplete: ' ',
-			width: 50,
-			total: filesList.length
-		});
-	}
-	filesList.forEach(function (filepath, index) {
-		var digest = crypto.createHash('md5').update(fs.readFileSync(filepath)).digest('hex'), // .substring(0, 6),
-			oldTags = path.basename(filepath, path.extname(filepath)).split(' ');
-		for (var i = 0; i < oldTags.length; ++i) {
-			if (!(/[a-zA-Z0-9_]/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
-				oldTags.splice(i, 1);
-				i--;
-			}
-		}
-		var newFileName = digest + (oldTags.length !== 0 ? ' ' + oldTags.join(' ') : '') + path.extname(filepath);
-		fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName);
-		if (bar) {
-			bar.tick();
-		} else {
-			console.log('[' + Math.round((index + 1) * 100 / filesList.length) + '%] ' + path.basename(filepath) + ' --> ' + newFileName);
-		}
-	});
-} else if (action === '--cleanup' || action === '-c') {
-	/*
-	 ######  ##       ########    ###    ##    ## ##     ## ########
-	##    ## ##       ##         ## ##   ###   ## ##     ## ##     ##
-	##       ##       ##        ##   ##  ####  ## ##     ## ##     ##
-	##       ##       ######   ##     ## ## ## ## ##     ## ########
-	##       ##       ##       ######### ##  #### ##     ## ##
-	##    ## ##       ##       ##     ## ##   ### ##     ## ##
-	 ######  ######## ######## ##     ## ##    ##  #######  ##
-	*/
-	console.log('Cleanup duplicates');
+	console.log('Searching duplicates...');
 	var bar;
 	if (ProgressBar) {
 		bar = new ProgressBar(':percent :etas [:bar]', {
@@ -127,14 +90,9 @@ if (action === '--rehash' || action === '-r') {
 		var digest = crypto.createHash('md5').update(fs.readFileSync(filepath)).digest('hex'); // .substring(0, 6);
 		if (hashMap[digest]) {
 			hashMap[digest].push(filepath);
-			/*
-			try {
-				fs.unlinkSync(filepath);
-				console.log('Removed duplicate:', path.basename(filepath));
-			} catch (e) {
-				console.error('ERROR removing duplicate:', filepath);
+			if (!bar) {
+				console.log('Found duplicate:', path.basename(filepath));
 			}
-			//*/
 		} else {
 			hashMap[digest] = [filepath];
 		}
@@ -144,14 +102,67 @@ if (action === '--rehash' || action === '-r') {
 			//console.log('[' + Math.round((index + 1) * 100 / filesList.length) + '%] ' + path.basename(filepath));
 		}
 	});
-	console.log('Duplicates found:')
+	console.log('Rehashing files...');
+	if (ProgressBar) {
+		bar = new ProgressBar(':percent :etas [:bar]', {
+			complete: '=',
+			incomplete: ' ',
+			width: 50,
+			total: Object.keys(hashMap).length
+		});
+	}
 	Object.keys(hashMap).forEach(function (digest) {
 		if (hashMap[digest].length !== 1) {
+			// DUPLICATES FOUND
 			var array = [];
 			hashMap[digest].forEach(function (filepath) {
-				array.push(path.basename(filepath));
+				var oldTags = path.basename(filepath, path.extname(filepath)).split(' ');
+				for (var i = 0; i < oldTags.length; ++i) {
+					if (!(/[a-zA-Z0-9_]/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
+						oldTags.splice(i, 1);
+						i--;
+					}
+				}
+				oldTags.forEach(function (tag) {
+					if (array.indexOf(tag) === -1) {
+						array.push(tag);
+					}
+				});
 			});
-			console.log(array);
+			hashMap[digest].forEach(function (filepath, index) {
+				if (index === 0) {
+					var newFileName = digest + (array.length !== 0 ? ' ' + array.join(' ') : '') + path.extname(filepath);
+					if (newFileName.length > 255) {
+						newFileName = digest;
+					}
+					fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName);
+				} else {
+					try {
+						fs.unlinkSync(filepath);
+						console.log('Removed duplicate:', path.basename(filepath));
+					} catch (e) {
+						console.error('ERROR removing duplicate:', filepath);
+					}
+				}
+			});
+		} else {
+			// NO DUPLICATE FOUND
+			var filepath = hashMap[digest][0],
+				oldTags = path.basename(filepath, path.extname(filepath)).split(' ');
+			for (var i = 0; i < oldTags.length; ++i) {
+				if (!(/[a-zA-Z0-9_]/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
+					oldTags.splice(i, 1);
+					i--;
+				}
+			}
+			var newFileName = digest + (oldTags.length !== 0 ? ' ' + oldTags.join(' ') : '') + path.extname(filepath);
+			if (newFileName.length > 255) {
+				newFileName = digest;
+			}
+			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName);
+		}
+		if (bar) {
+			bar.tick();
 		}
 	});
 } else if (action.indexOf('--addtags') === 0 || action.indexOf('-a') === 0) {
@@ -240,7 +251,9 @@ if (action === '--rehash' || action === '-r') {
 	console.log('Generating JSON map');
 	var json = {
 		pics: {},
-		tags: {}
+		tags: {
+			'TAGME': []
+		}
 	};
 	var bar;
 	if (ProgressBar) {
@@ -258,21 +271,26 @@ if (action === '--rehash' || action === '-r') {
 		var stats = fs.statSync(filepath);
 		json.pics[hash] = {
 			hash: hash,
+			path: filepath,
 			tags: tags,
 			ts: stats.birthtime.getTime()
 		};
-		tags.forEach(function (tag) {
-			if (!json.tags[tag]) {
-				json.tags[tag] = [hash];
-			} else {
-				json.tags[tag].push(hash);
-			}
-		});
+		if (tags.length === 0) {
+			json.tags.TAGME.push(hash);
+		} else {
+			tags.forEach(function (tag) {
+				if (!json.tags[tag]) {
+					json.tags[tag] = [hash];
+				} else {
+					json.tags[tag].push(hash);
+				}
+			});
+		}
 		if (bar) {
 			bar.tick();
 		}
 	});
-	var filecontent = JSON.stringify(json);
+	var filecontent = JSON.stringify(json, null, 2);
 	fs.writeFileSync(path.dirname(filesList[0]) + path.sep + 'map.json', filecontent);
 	console.log('JSON map generated.');
 } else if (action === '--help' || action === '-h') {
