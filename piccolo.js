@@ -14,7 +14,6 @@ var showUsage = function () {
 
 Available Actions:
 	-r, --rehash [PATH]			rename each file in the given PATH using its own MD5 hex digest, eventually preserving existing tags
-	-c, --cleanup [PATH]			show duplicate files
 	-a, --addtags=TAG[,TAG...] [PATH]	add tags to files in the given PATH
 	-d, --removetags=TAG[,TAG...] [PATH]	remove tags to files in the given PATH
 	-m, --map				generate JSON map
