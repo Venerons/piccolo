@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Piccolo</title>
+	<meta name="application-name" content="Piccolo">
+	<meta name="viewport" content="width=device-width">
+
+	<link rel="stylesheet" href="main.min.css">
+	<link rel="stylesheet" href="icons.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700">	
+</head>
+<body>
+	<header>
+		<datalist id="header-tags"></datalist>
+		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
+		<button id="header-showtags" title="Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
+		<button id="header-edit" title="Edit"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
+		<button id="header-load" title="Load Map"><i class="icon-load"></i>&nbsp;&nbsp;Load</button>
+		<input id="header-load-file" type="file" accept=".json,application/json" hidden>
+	</header>
+	<p id="main-start" class="screen-center">
+		<a onclick="$('#header-load-file').click()">
+			<i class="icon-load" style="font-size: 2rem"></i>
+			<br>
+			<br>
+			Start by loading a map.
+		</a>
+	</p>
+	<p id="main-loaded" class="screen-center" style="display: none">Good! Now search a tag and enjoy!</p>
+	<p id="main-loading" class="screen-center" style="display: none"><i class="icon-loading" style="font-size: 2rem"></i><br><br>Loading...</p>
+	<main></main>
+
+	<div class="backdrop" style="display: none"></div>
+
+	<!--
+	<div class="dialog" style="display: none">
+		<div class="dialog-header">
+			<h1>Dialog Header</h1>
+		</div>
+		<div class="dialog-content">
+			<p>Dialog content</p>
+		</div>
+		<div class="dialog-footer">
+			<button>Close</button>
+		</div>
+	</div>
+	-->
+
+	<div id="dialog-tags" class="dialog" style="display: none">
+		<div class="dialog-header">
+			<h1>Tags</h1>
+		</div>
+		<div id="dialog-tags-content" class="dialog-content"></div>
+		<div class="dialog-footer">
+			<button id="dialog-tags-close">Close</button>
+		</div>
+	</div>
+
+	<div id="dialog-pic" class="dialog dialog-nobg" style="display: none">
+		<div id="dialog-pic-content" class="dialog-content" style="text-align: center"></div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+	<script src="piccolo.min.js"></script>
+</body>
+</html>
