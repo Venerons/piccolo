@@ -119,7 +119,7 @@ if (action === '--rehash' || action === '-r') {
 			hashMap[digest].forEach(function (filepath) {
 				var oldTags = path.basename(filepath, path.extname(filepath)).split(' ');
 				for (var i = 0; i < oldTags.length; ++i) {
-					if (!(/[a-zA-Z0-9_]/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
+					if (!(/[a-zA-Z0-9_\'\"]+/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
 						oldTags.splice(i, 1);
 						i--;
 					}
@@ -153,7 +153,7 @@ if (action === '--rehash' || action === '-r') {
 			var filepath = hashMap[digest][0],
 				oldTags = path.basename(filepath, path.extname(filepath)).split(' ');
 			for (var i = 0; i < oldTags.length; ++i) {
-				if (!(/[a-zA-Z0-9_]/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
+				if (!(/[a-zA-Z0-9_\'\"]+/.test(oldTags[i]) && !/[0-9]+/.test(oldTags[i]))) {
 					oldTags.splice(i, 1);
 					i--;
 				}

@@ -7,6 +7,7 @@
 	<meta name="viewport" content="width=device-width">
 
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+	<link href="icons.css" rel="stylesheet">
 	<style type="text/css">
 		*, *::before, *::after {
 			box-sizing: border-box;
@@ -78,6 +79,13 @@
 			margin: 0 1rem;
 			border-left: 1px solid rgba(245, 245, 245, 0.3);
 		}
+		.badge {
+			display: inline-block;
+			margin: 0.2rem;
+			padding: 0.3rem;
+			background: rgba(255, 255, 255, 0.3);
+			cursor: pointer;
+		}
 		main {
 			flex: 1;
 			display: flex;
@@ -93,7 +101,7 @@
 			margin: 0.5rem;
 			cursor: pointer;
 		}
-		[data-src] {
+		[data-lazy] {
 			width: 150px;
 			height: 150px;
 			background: lightsteelblue;
@@ -149,13 +157,9 @@
 	<header>
 		<datalist id="header-tags"></datalist>
 		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
-		<button id="header-filter" disabled>Filter</button>
+		<button id="header-showtags" disabled><i class="icon-tags"></i></button>
 		<!--<div class="header-separator"></div>-->
-		<button id="header-showtags" disabled>Tags</button>
-		<!--<div class="header-separator"></div>-->
-		<button id="header-sort" disabled>Sort</button>
-		<!--<div class="header-separator"></div>-->
-		<button id="header-load">Load</button>
+		<button id="header-load"><i class="icon-load"></i></button>
 		<input id="header-load-file" type="file" accept=".json,application/json" hidden>
 	</header>
 	<main>
@@ -177,6 +181,16 @@
 		</div>
 	</div>
 	-->
+
+	<div id="dialog-tags" class="dialog" style="display: none">
+		<div class="dialog-header">
+			<h1>Tags</h1>
+		</div>
+		<div id="dialog-tags-content" class="dialog-content"></div>
+		<div class="dialog-footer">
+			<button id="dialog-tags-close">Close</button>
+		</div>
+	</div>
 
 	<div id="dialog-pic" class="dialog dialog-nobg" style="display: none">
 		<div id="dialog-pic-content" class="dialog-content" style="text-align: center"></div>
@@ -207,10 +221,17 @@
 					}
 					var datalist = document.getElementById('header-tags');
 					datalist.innerHTML = '';
-					Object.keys(MAP.tags).forEach(function (tag) {
+					var dialogTags = document.getElementById('dialog-tags-content');
+					dialogTags.innerHTML = '';
+					Object.keys(MAP.tags).sort().forEach(function (tag) {
 						var option = document.createElement('option');
-						option.value = tag;
+						option.value = tag.replace(/\_/g, ' ');
 						datalist.appendChild(option);
+						var badge = document.createElement('div');
+						badge.classList.add('badge');
+						badge.textContent = tag.replace(/\_/g, ' ') + ' (' + MAP.tags[tag].length + ')';
+						badge.onclick = function () { Piccolo.filterByTag(tag); };
+						dialogTags.appendChild(badge);
 					});
 				},
 				isElementInViewport: function (element) {
@@ -218,19 +239,53 @@
 					return (rect.top >= 0 && rect.left >= 0 && rect.top <= (window.innerHeight || document.documentElement.clientHeight));
 				},
 				processScroll: function () {
-					[].forEach.call(document.querySelectorAll('[data-src]'), function (element) {
-						if (Piccolo.isElementInViewport(element)) {
-							element.onload = function () {
-								element.removeAttribute('data-src');
-							};
-							element.setAttribute('src', element.getAttribute('data-src'));
+					[].forEach.call(document.querySelectorAll('[data-lazy]'), function (item) {
+						if (Piccolo.isElementInViewport(item)) {
+							item.removeAttribute('data-lazy');
+							$(item).append(Piccolo.renderThumbnail($(item).data('pic')));
 						}
 					});
+				},
+				renderThumbnail: function (picID) {
+					var ELEMENT_WIDTH = 150,
+						ELEMENT_HEIGHT = 150,
+						pic = MAP.pics[picID],
+						ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
+						element;
+					if (['gif'].indexOf(ext) !== -1) {
+						element = document.createElement('canvas');
+						var context = element.getContext('2d'),
+							img = new Image();
+						img.onload = function () {
+							element.height = ELEMENT_HEIGHT;
+							element.width = ELEMENT_HEIGHT * img.width / img.height;
+							context.drawImage(img, 0, 0, element.width, element.height);
+						};
+						img.src = pic.path;
+					} else if (['webm', 'flv', 'mp4', 'mov', 'avi'].indexOf(ext) !== -1) {
+						element = document.createElement('video');
+						element.autoplay = false;
+						element.controls = false;
+						element.loop = true;
+						element.onmouseover = function () {
+							element.play();
+						};
+						element.onmouseout = function () {
+							element.pause();
+						};
+						element.src = pic.path;
+					} else {
+						element = new Image();
+						element.src = pic.path;
+					}
+					element.height = ELEMENT_HEIGHT;
+					return element;
 				},
 				filterByTag: function (tag) {
 					if (!window.MAP) {
 						return;
 					}
+					$('.dialog, .backdrop').hide();
 					var $main = $('<main></main>'),// $('main').empty(),
 						pics = MAP.tags[tag];
 					if (!pics) {
@@ -240,55 +295,25 @@
 					pics.sort(function (a, b) {
 						return MAP.pics[a].timestamp > MAP.pics[b].timestamp ? -1 : 1;
 					}).forEach(function (picID) {
-						var ELEMENT_WIDTH = 150,
-							ELEMENT_HEIGHT = 150,
-							pic = MAP.pics[picID],
-							ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
-							element;
-						if (['gif'].indexOf(ext) !== -1) {
-							element = document.createElement('canvas');
-							var context = element.getContext('2d'),
-								img = new Image();
-							img.onload = function () {
-								element.height = ELEMENT_HEIGHT;
-								element.width = ELEMENT_HEIGHT * img.width / img.height;
-								context.drawImage(img, 0, 0, element.width, element.height);
-							};
-							img.src = pic.path;
-						} else if (['webm', 'flv', 'mp4'].indexOf(ext) !== -1) {
-							element = document.createElement('video');
-							element.autoplay = false;
-							element.controls = false;
-							element.loop = true;
-							element.onmouseover = function () {
-								console.log(element);
-								element.play();
-							};
-							element.onmouseout = function () {
-								element.pause();
-							};
-							element.src = pic.path;
-						} else {
-							element = new Image();
-							element.src = pic.path;
-						}
-						element.height = ELEMENT_HEIGHT;
-						var $container = $('<div class="item" data-pic="' + picID + '" title="' + (pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'))) + '"></div>');
-						$container.append(element);
+						var pic = MAP.pics[picID];
+						var $container = $('<div class="item" data-lazy data-pic="' + picID + '" title="' + (pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'))) + '"></div>');
+						//var $container = $('<div class="item" data-pic="' + picID + '" title="' + (pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'))) + '"></div>');
+						//$container.append(Piccolo.renderThumbnail(picID));
 						$main.append($container);
 					});
 					$('main').replaceWith($main);
 					$('#header-sort').prop('disabled', false);
-					//Piccolo.processScroll();
+					Piccolo.processScroll();
 					$('.item', 'main').on('click', function () {
 						var $item = $(this),
 							picID = $item.data('pic'),
 							pic = MAP.pics[picID],
-							ext = pic.path.substring(pic.path.lastIndexOf('.') + 1);
+							ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
+							title = pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'));
 						if (['png', 'jpg', 'jpeg', 'gif'].indexOf(ext) !== -1) {
-							$('#dialog-pic-content').html('<img src="' + pic.path + '" style="max-width: 100%; max-height: 100%">');
+							$('#dialog-pic-content').html('<img src="' + pic.path + '" style="max-width: 100%; max-height: 100%" title="' + title + '">');
 						} else if (['webm', 'flv', 'mp4'].indexOf(ext) !== -1) {
-							$('#dialog-pic-content').html('<video src="' + pic.path + '" autoplay loop controls style="max-width: 100%; max-height: 100%"></video>');
+							$('#dialog-pic-content').html('<video src="' + pic.path + '" autoplay loop controls style="max-width: 100%; max-height: 100%" title="' + title + '"></video>');
 						}
 						$('#dialog-pic, .backdrop').show();
 					});
@@ -299,19 +324,14 @@
 		})();
 
 		$('#header-search').on('change', function () {
-			Piccolo.filterByTag($(this).val());
-		});
-
-		$('#header-filter').on('click', function () {
-			Piccolo.filterByTag($('#header-search').val());
+			Piccolo.filterByTag($(this).val().replace(/\s/g, '_'));
 		});
 
 		$('#header-showtags').on('click', function () {
-			alert('TODO');
+			$('#dialog-tags, .backdrop').show();
 		});
-
-		$('#header-sort').on('click', function () {
-			alert('TODO');
+		$('#dialog-tags-close').on('click', function () {
+			$('#dialog-tags, .backdrop').hide();
 		});
 
 		$('#header-load').on('click', function () {
@@ -345,7 +365,26 @@
 			$('.backdrop, .dialog').hide();
 		});
 
-		//window.addEventListener('scroll', Piccolo.processScroll);
+		var debounce = function (func, wait, immediate) {
+			var timeout;
+			return function() {
+				var context = this, args = arguments;
+				var later = function() {
+					timeout = null;
+					if (!immediate) func.apply(context, args);
+				};
+				var callNow = immediate && !timeout;
+				clearTimeout(timeout);
+				timeout = setTimeout(later, wait);
+				if (callNow) func.apply(context, args);
+			};
+		};
+
+		var onwheel = debounce(function () {
+			Piccolo.processScroll();
+		}, 250);
+
+		document.addEventListener('wheel', onwheel);
 	</script>
 </body>
 </html>
