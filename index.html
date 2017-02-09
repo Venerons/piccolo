@@ -269,7 +269,7 @@
 							element.src = pic.path;
 						}
 						element.height = ELEMENT_HEIGHT;
-						var $container = $('<div class="item" data-pic="' + picID + '"></div>');
+						var $container = $('<div class="item" data-pic="' + picID + '" title="' + (pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'))) + '"></div>');
 						$container.append(element);
 						$main.append($container);
 					});
