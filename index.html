@@ -190,7 +190,8 @@
 						try {
 							window.MAP = JSON.parse(e.target.result);
 							Piccolo.updateTagList();
-							$('#header-filter, #header-showtags, header-search').prop('disabled', false);
+							$('#header-filter, #header-showtags, #header-search').prop('disabled', false);
+							$('main > p').text('Good! Now search a tag and enjoy!');
 						} catch (e) {
 							alert('Error while loading map file.');
 						}
