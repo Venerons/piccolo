@@ -110,6 +110,8 @@ if (action === '--rehash' || action === '-r') {
 			total: Object.keys(hashMap).length
 		});
 	}
+	var rehashCount = 0,
+	    duplicateCount = 0;
 	Object.keys(hashMap).forEach(function (digest) {
 		if (hashMap[digest].length !== 1) {
 			// DUPLICATES FOUND
@@ -135,10 +137,12 @@ if (action === '--rehash' || action === '-r') {
 						newFileName = digest;
 					}
 					fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName);
+					rehashCount++;
 				} else {
 					try {
 						fs.unlinkSync(filepath);
 						console.log('Removed duplicate:', path.basename(filepath));
+						duplicateCount++;
 					} catch (e) {
 						console.error('ERROR removing duplicate:', filepath);
 					}
@@ -159,11 +163,13 @@ if (action === '--rehash' || action === '-r') {
 				newFileName = digest;
 			}
 			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName);
+			rehashCount++;
 		}
 		if (bar) {
 			bar.tick();
 		}
 	});
+	console.log('Rehashing completed.\r\n' + rehashCount + ' files has been rehashed, ' + duplicateCount + ' duplicated files has been removed.');
 } else if (action.indexOf('--addtags') === 0 || action.indexOf('-a') === 0) {
 	/*
 	   ###    ########  ########     ########    ###     ######    ######
@@ -175,7 +181,7 @@ if (action === '--rehash' || action === '-r') {
 	##     ## ########  ########        ##    ##     ##  ######    ######
 	*/
 	var tags = action.split('=')[1].split(',');
-	console.log('Add tags', tags);
+	console.log('Adding tags', tags);
 	var bar;
 	if (ProgressBar) {
 		bar = new ProgressBar(':percent :etas [:bar]', {
@@ -200,6 +206,7 @@ if (action === '--rehash' || action === '-r') {
 			console.log('[' + Math.round((index + 1) * 100 / filesList.length) + '%] ' + path.basename(filepath) + ' --> ' + newFileName);
 		}
 	});
+	console.log('Tags added.');
 } else if (action.indexOf('--removetags') === 0 || action.indexOf('-d') === 0) {
 	/*
 	########  ######## ##     ##  #######  ##     ## ########    ########    ###     ######    ######
@@ -211,7 +218,7 @@ if (action === '--rehash' || action === '-r') {
 	##     ## ######## ##     ##  #######     ###    ########       ##    ##     ##  ######    ######
 	*/
 	var tags = action.split('=')[1].split(',');
-	console.log('Remove tags', tags);
+	console.log('Removing tags', tags);
 	var bar;
 	if (ProgressBar) {
 		bar = new ProgressBar(':percent :etas [:bar]', {
@@ -237,6 +244,7 @@ if (action === '--rehash' || action === '-r') {
 			console.log('[' + Math.round((index + 1) * 100 / filesList.length) + '%] ' + path.basename(filepath) + ' --> ' + newFileName);
 		}
 	});
+	console.log('Tags removed.');
 } else if (action === '--map' || action === '-m') {
 	/*
 	      ##  ######   #######  ##    ##    ##     ##    ###    ########
@@ -247,7 +255,7 @@ if (action === '--rehash' || action === '-r') {
 	##    ## ##    ## ##     ## ##   ###    ##     ## ##     ## ##
 	 ######   ######   #######  ##    ##    ##     ## ##     ## ##
 	*/
-	console.log('Generating JSON map');
+	console.log('Generating JSON map...');
 	var json = {
 		pics: {},
 		tags: {
@@ -289,9 +297,10 @@ if (action === '--rehash' || action === '-r') {
 			bar.tick();
 		}
 	});
-	var filecontent = JSON.stringify(json, null, 2);
-	fs.writeFileSync(path.dirname(filesList[0]) + path.sep + 'map.json', filecontent);
-	console.log('JSON map generated.');
+	var filecontent = JSON.stringify(json, null, 2),
+	    filepath = path.dirname(filesList[0]) + path.sep + 'map.json';
+	fs.writeFileSync(filename, filecontent);
+	console.log('JSON map generated: ' + filepath);
 } else if (action === '--help' || action === '-h') {
 	showUsage();
 } else {
