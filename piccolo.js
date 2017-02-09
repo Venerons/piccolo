@@ -299,7 +299,7 @@ if (action === '--rehash' || action === '-r') {
 	});
 	var filecontent = JSON.stringify(json, null, 2),
 	    filepath = path.dirname(filesList[0]) + path.sep + 'map.json';
-	fs.writeFileSync(filename, filecontent);
+	fs.writeFileSync(filepath, filecontent);
 	console.log('JSON map generated: ' + filepath);
 } else if (action === '--help' || action === '-h') {
 	showUsage();
