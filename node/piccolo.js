@@ -8,6 +8,10 @@ try {
 	ProgressBar = require('progress');
 } catch (e) {}
 
+//###############################################################
+//###############################################################
+//###############################################################
+
 var showUsage = function () {
 	console.log(
 `Usage: node piccolo.js [ACTION] [PATH]
@@ -20,6 +24,24 @@ Available Actions:
 	-h, --help				show help
 `);
 };
+
+var tagsSorting = function (a, b) {
+	if (a.toLowerCase() < b.toLowerCase()) {
+		return -1;
+	} else if (a.toLowerCase() > b.toLowerCase()) {
+		return 1;
+	} else if (a < b) {
+		return -1;
+	} else if (a > b) {
+		return 1;
+	} else {
+		0
+	}
+};
+
+//###############################################################
+//###############################################################
+//###############################################################
 
 /*
 process.argv.forEach(function (val, index, array) {
@@ -37,7 +59,7 @@ if (process.argv.length > 2) {
 		tmpPath = path.resolve(tmpPath);
 	}
 	try {
-		fs.accessSync(tmpPath, fs.F_OK);
+		fs.accessSync(tmpPath, fs.constants.F_OK);
 		var stats = fs.statSync(tmpPath);
 		if (stats.isDirectory()) {
 			var array = fs.readdirSync(tmpPath);
@@ -46,13 +68,13 @@ if (process.argv.length > 2) {
 					return;
 				}
 				try {
-					fs.accessSync(tmpPath + path.sep + filename, fs.R_OK | fs.W_OK);
+					fs.accessSync(tmpPath + path.sep + filename, fs.constants.R_OK | fs.constants.W_OK);
 					filesList.push(tmpPath + path.sep + filename);
 				} catch (e) {}
 			});
 		} else if (stats.isFile()) {
 			try {
-				fs.accessSync(tmpPath, fs.R_OK | fs.W_OK);
+				fs.accessSync(tmpPath, fs.constants.R_OK | fs.constants.W_OK);
 				filesList.push(tmpPath);
 			} catch (e) {}
 		}
@@ -60,9 +82,14 @@ if (process.argv.length > 2) {
 }
 
 if (filesList.length === 0) {
+	console.error('Error: No files on input.');
 	showUsage();
 	process.exit(1);
 }
+
+//###############################################################
+//###############################################################
+//###############################################################
 
 if (action === '--rehash' || action === '-r') {
 	/*
@@ -75,6 +102,7 @@ if (action === '--rehash' || action === '-r') {
 	##     ## ######## ##     ## ##     ##  ######  ##     ##
 	*/
 	console.log('Searching duplicates...');
+	var timestamp = Date.now();
 	var bar;
 	if (ProgressBar) {
 		bar = new ProgressBar(':percent :etas [:bar]', {
@@ -90,7 +118,7 @@ if (action === '--rehash' || action === '-r') {
 		if (hashMap[digest]) {
 			hashMap[digest].push(filepath);
 			if (!bar) {
-				console.log('Found duplicate:', path.basename(filepath));
+				console.log('Found duplicate file ' + path.basename(filepath));
 			}
 		} else {
 			hashMap[digest] = [filepath];
@@ -101,7 +129,9 @@ if (action === '--rehash' || action === '-r') {
 			//console.log('[' + Math.round((index + 1) * 100 / filesList.length) + '%] ' + path.basename(filepath));
 		}
 	});
+	console.log('Duplicates search completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
 	console.log('Rehashing files...');
+	timestamp = Date.now();
 	if (ProgressBar) {
 		bar = new ProgressBar(':percent :etas [:bar]', {
 			complete: '=',
@@ -111,7 +141,7 @@ if (action === '--rehash' || action === '-r') {
 		});
 	}
 	var rehashCount = 0,
-	    duplicateCount = 0;
+		duplicateCount = 0;
 	Object.keys(hashMap).forEach(function (digest) {
 		var array = [];
 		hashMap[digest].forEach(function (filepath) {
@@ -122,9 +152,7 @@ if (action === '--rehash' || action === '-r') {
 				}
 			});
 		});
-		array.sort(function (a, b) {
-			return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
-		});
+		array.sort(tagsSorting);
 		hashMap[digest].forEach(function (filepath, index) {
 			if (index === 0) {
 				var newFileName = digest + (array.length !== 0 ? ' ' + array.join(' ') : '');
@@ -138,10 +166,10 @@ if (action === '--rehash' || action === '-r') {
 			} else {
 				try {
 					fs.unlinkSync(filepath);
-					console.log('Removed duplicate:', path.basename(filepath));
+					console.log('Removed duplicate file ' + path.basename(filepath));
 					duplicateCount++;
 				} catch (e) {
-					console.error('ERROR removing duplicate:', filepath);
+					console.error('Error: An error occurred removing duplicate file ' + filepath);
 				}
 			}
 		});
@@ -149,7 +177,9 @@ if (action === '--rehash' || action === '-r') {
 			bar.tick();
 		}
 	});
-	console.log('Rehashing completed.\r\n' + rehashCount + ' files has been rehashed, ' + duplicateCount + ' duplicated files has been removed.');
+	console.log('Rehashing completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
+	console.log(rehashCount + ' files has been rehashed.');
+	console.log(duplicateCount + ' duplicated files has been removed.');
 } else if (action.indexOf('--addtags') === 0 || action.indexOf('-a') === 0) {
 	/*
 	   ###    ########  ########     ########    ###     ######    ######
@@ -178,9 +208,7 @@ if (action === '--rehash' || action === '-r') {
 				fileTags.push(tag);
 			}
 		});
-		fileTags.sort(function (a, b) {
-			return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
-		});
+		fileTags.sort(tagsSorting);
 		var newFileName = fileTags.join(' ');
 		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
 			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
@@ -221,9 +249,7 @@ if (action === '--rehash' || action === '-r') {
 				i--;
 			}
 		}
-		fileTags.sort(function (a, b) {
-			return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
-		});
+		fileTags.sort(tagsSorting);
 		var newFileName = fileTags.join(' ');
 		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
 			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
@@ -288,12 +314,13 @@ if (action === '--rehash' || action === '-r') {
 		}
 	});
 	var filecontent = JSON.stringify(json),
-	    filepath = path.dirname(filesList[0]) + path.sep + 'map.json';
+		filepath = path.dirname(filesList[0]) + path.sep + 'map.json';
 	fs.writeFileSync(filepath, filecontent);
 	console.log('JSON map generated: ' + filepath);
 } else if (action === '--help' || action === '-h') {
 	showUsage();
 } else {
+	console.error('Error: Invalid action ' + action);
 	showUsage();
 	process.exit(1);
 }
