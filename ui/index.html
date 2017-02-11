@@ -15,9 +15,15 @@
 		<datalist id="header-tags"></datalist>
 		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
 		<button id="header-showtags" title="Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
-		<button id="header-edit" title="Edit"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
+		<button id="header-edit" title="Edit" disabled><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
 		<button id="header-load" title="Load Map"><i class="icon-load"></i>&nbsp;&nbsp;Load</button>
 		<input id="header-load-file" type="file" accept=".json,application/json" hidden>
+	</header>
+	<header id="toolbar" style="display: none">
+		<input id="toolbar-tags" type="text" list="header-tags" placeholder="Tag,tag..." style="flex: 1; margin-right: 1rem">
+		<button id="toolbar-add" title="Add Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Add Tags</button>
+		<button id="toolbar-remove" title="Remove Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Remove Tags</button>
+		<button id="toolbar-delete" title="Delete"><i class="icon-tags"></i>&nbsp;&nbsp;Delete</button>
 	</header>
 	<p id="main-start" class="screen-center">
 		<a onclick="$('#header-load-file').click()">
@@ -62,6 +68,6 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
-	<script src="piccolo.min.js"></script>
+	<script src="main.js"></script>
 </body>
 </html>

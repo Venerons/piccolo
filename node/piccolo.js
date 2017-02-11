@@ -26,7 +26,11 @@ Available Actions:
 };
 
 var tagsSorting = function (a, b) {
-	if (a.toLowerCase() < b.toLowerCase()) {
+	if (a.length === 32 && /^[a-z0-9]+$/g.test(a)) {
+		return -1;
+	} else if (b.length === 32 && /^[a-z0-9]+$/g.test(b)) {
+		return 1;
+	} else if (a.toLowerCase() < b.toLowerCase()) {
 		return -1;
 	} else if (a.toLowerCase() > b.toLowerCase()) {
 		return 1;
@@ -35,7 +39,7 @@ var tagsSorting = function (a, b) {
 	} else if (a > b) {
 		return 1;
 	} else {
-		0
+		return 0;
 	}
 };
 
@@ -59,7 +63,7 @@ if (process.argv.length > 2) {
 		tmpPath = path.resolve(tmpPath);
 	}
 	try {
-		fs.accessSync(tmpPath, fs.constants.F_OK);
+		fs.accessSync(tmpPath, fs.F_OK);
 		var stats = fs.statSync(tmpPath);
 		if (stats.isDirectory()) {
 			var array = fs.readdirSync(tmpPath);
@@ -68,13 +72,13 @@ if (process.argv.length > 2) {
 					return;
 				}
 				try {
-					fs.accessSync(tmpPath + path.sep + filename, fs.constants.R_OK | fs.constants.W_OK);
+					fs.accessSync(tmpPath + path.sep + filename, fs.R_OK | fs.W_OK);
 					filesList.push(tmpPath + path.sep + filename);
 				} catch (e) {}
 			});
 		} else if (stats.isFile()) {
 			try {
-				fs.accessSync(tmpPath, fs.constants.R_OK | fs.constants.W_OK);
+				fs.accessSync(tmpPath, fs.R_OK | fs.W_OK);
 				filesList.push(tmpPath);
 			} catch (e) {}
 		}

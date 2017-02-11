@@ -7,7 +7,7 @@
 				try {
 					window.MAP = JSON.parse(e.target.result);
 					Piccolo.updateTagList();
-					$('#header-filter, #header-showtags, #header-search').prop('disabled', false);
+					$('#header-search, #header-showtags, #header-edit').prop('disabled', false);
 					$('main').empty();
 					$('#main-start').hide();
 					$('#main-loaded').show();
@@ -53,7 +53,7 @@
 			}).forEach(function (picID) {
 				var lazy = true,
 					pic = MAP.pics[picID],
-					title = pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.')),
+					title = pic.tags.join(' '),
 					$container = $('<div class="item" title="' + title + '" data-pic="' + picID + '"' + (lazy ? ' data-lazy' : '') + '></div>');
 				if (!lazy) {
 					$container.append(Piccolo.renderThumbnail(picID));
@@ -102,11 +102,15 @@
 		},
 		applyEventListener: function () {
 			$('.item', 'main').on('click', function () {
+				if (window.EDIT_MODE) {
+					$(this).toggleClass('item-selected');
+					return;
+				}
 				var $item = $(this),
 					picID = $item.data('pic'),
 					pic = MAP.pics[picID],
 					ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
-					title = pic.path.substring(pic.path.lastIndexOf('/') + 1, pic.path.lastIndexOf('.'));
+					title = pic.tags.join(' ');
 				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext) !== -1) {
 					var video = document.createElement('video');
 					video.autoplay = true;
@@ -152,46 +156,9 @@
 	window.Piccolo = Piccolo;
 })();
 
-$('#header-search').on('change', function () {
-	Piccolo.filterByTag($(this).val().replace(/\s/g, '_'));
-});
-
-$('#header-showtags').on('click', function () {
-	$('.backdrop, #dialog-tags').show();
-});
-$('#dialog-tags-close').on('click', function () {
-	$('.backdrop, #dialog-tags').hide();
-});
-
-$('#header-load').on('click', function () {
-	$('#header-load-file').click();
-});
-
-$('#header-load-file').on('change', function () {
-	var file = $(this).get(0).files[0];
-	Piccolo.loadMap(file);
-});
-
-/*
-var dropbox = document.getElementById('dropbox');
-dropbox.addEventListener("dragenter", function (e) {
-	e.stopPropagation();
-	e.preventDefault();
-}, false);
-dropbox.addEventListener("dragover", function (e) {
-	e.stopPropagation();
-	e.preventDefault();
-}, false);
-dropbox.addEventListener("drop", function (e) {
-	e.stopPropagation();
-	e.preventDefault();
-	var file = e.dataTransfer.files[0];
-	Piccolo.loadMap(file);
-}, false);
-*/
-
 $('.backdrop').on('click', function () {
 	$('.backdrop, .dialog').hide();
+	$('#dialog-').hide();
 });
 
 var debounce = function (func, wait, immediate) {
@@ -212,5 +179,122 @@ var debounce = function (func, wait, immediate) {
 var onwheel = debounce(function () {
 	Piccolo.processScroll();
 }, 250);
-
 document.addEventListener('wheel', onwheel);
+
+$('#header-search').on('change', function () {
+	Piccolo.filterByTag($(this).val().replace(/\s/g, '_'));
+});
+
+$('#header-showtags').on('click', function () {
+	$('.backdrop, #dialog-tags').show();
+});
+$('#dialog-tags-close').on('click', function () {
+	$('.backdrop, #dialog-tags').hide();
+});
+
+$('#header-load').on('click', function () {
+	$('#header-load-file').click();
+});
+
+$('#header-load-file').on('change', function () {
+	var file = $(this).get(0).files[0];
+	Piccolo.loadMap(file);
+});
+
+$('#header-edit').on('click', function () {
+	if (window.EDIT_MODE) {
+		delete window.EDIT_MODE;
+		$('#toolbar').hide();
+	} else {
+		window.EDIT_MODE = true;
+		$('#toolbar').show();
+	}
+});
+
+$('#toolbar-tags').on('input', function () {
+	if ($(this).val() === '') {
+		$('#toolbar-add, #toolbar-remove').prop('disabled', true);
+	} else {
+		$('#toolbar-add, #toolbar-remove').prop('disabled', false);
+	}
+});
+
+var commands = [];
+$('#toolbar-add').on('click', function () {
+	var tags = $('#toolbar-tags').val().replace(/\s/g, '_');
+	$('.item-selected').each(function () {
+		var picID = $(this).data('pic'),
+			pic = MAP.pics[picID];
+		if (pic) {
+			commands.push({ command: 'add', path: pic.path, tags: tags });
+		}
+		$(this).removeClass('item-selected');
+	});
+	$('#toolbar-tags').val('');
+});
+
+$('#toolbar-remove').on('click', function () {
+	var tags = $('#toolbar-tags').val().replace(/\s/g, '_');
+	$('.item-selected').each(function () {
+		var picID = $(this).data('pic'),
+			pic = MAP.pics[picID];
+		if (pic) {
+			commands.push({ command: 'remove', path: pic.path, tags: tags });
+		}
+		$(this).removeClass('item-selected');
+	});
+	$('#toolbar-tags').val('');
+});
+
+$('#toolbar-delete').on('click', function () {
+	var $selected = $('.item-selected');
+	if ($selected.length > 0) {
+		if (confirm('Are you sure to delete the ' + $selected.length + ' selected pictures?')) {
+			$selected.each(function () {
+				var picID = $(this).data('pic'),
+					pic = MAP.pics[picID];
+				if (pic) {
+					commands.push({ command: 'delete', path: pic.path });
+				}
+				$(this).removeClass('item-selected');
+			});
+		}
+	}
+});
+
+var exportCommands = function (scriptpath) {
+	var piccolopath = scriptpath || 'piccolo.js',
+		output = '';
+	commands.sort(function (a, b) {
+		var order = ['remove', 'add', 'delete'];
+		return order.indexOf(a.command) < order.indexOf(b.command) ? -1 : 1;
+	}).forEach(function (command) {
+		if (command.command === 'delete') {
+			output += 'rm "' + command.path + '"\n';
+		} else if (command.command === 'add') {
+			output += 'node ' + piccolopath + ' -a=' + command.tags + ' "' + command.path + '"\n';
+		} else if (command.command === 'remove') {
+			output += 'node ' + piccolopath + ' -d=' + command.tags + ' "' + command.path + '"\n';
+		}
+	});
+	commands = [];
+	console.info(output);
+};
+
+/*
+var dropbox = document.getElementById('dropbox');
+dropbox.addEventListener("dragenter", function (e) {
+	e.stopPropagation();
+	e.preventDefault();
+}, false);
+dropbox.addEventListener("dragover", function (e) {
+	e.stopPropagation();
+	e.preventDefault();
+}, false);
+dropbox.addEventListener("drop", function (e) {
+	e.stopPropagation();
+	e.preventDefault();
+	var file = e.dataTransfer.files[0];
+	Piccolo.loadMap(file);
+}, false);
+*/

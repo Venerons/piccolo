@@ -106,6 +106,10 @@ main {
 	height: 150px;
 	background: lightsteelblue;
 }
+.item-selected {
+	opacity: 0.3;
+	border-bottom: 2px solid dodgerblue;
+}
 
 .backdrop {
 	z-index: 199;
