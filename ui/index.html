@@ -13,8 +13,9 @@
 <body>
 	<header>
 		<datalist id="header-tags"></datalist>
-		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
+		<button id="header-randompics" title="Random Pics" disabled><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
 		<button id="header-showtags" title="Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
+		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
 		<button id="header-edit" title="Edit" disabled><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
 		<button id="header-load" title="Load Map"><i class="icon-load"></i>&nbsp;&nbsp;Load</button>
 		<input id="header-load-file" type="file" accept=".json,application/json" hidden>
@@ -59,6 +60,7 @@
 		</div>
 		<div id="dialog-tags-content" class="dialog-content"></div>
 		<div class="dialog-footer">
+			<button id="dialog-tags-random">Random</button>
 			<button id="dialog-tags-close">Close</button>
 		</div>
 	</div>

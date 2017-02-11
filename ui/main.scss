@@ -98,6 +98,8 @@ main {
 	padding: 0.5rem;
 }
 .item {
+	//min-width: 150px;
+	//min-height: 150px;
 	margin: 0.5rem;
 	cursor: pointer;
 }
@@ -152,9 +154,8 @@ main {
 	overflow: auto;
 }
 .dialog-footer {
-	min-height: 50px;
 	text-align: right;
-	padding: 1rem;
+	padding: 0.5rem;
 }
 .badge {
 	display: inline-block;
