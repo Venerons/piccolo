@@ -66,7 +66,7 @@
 				pic = MAP.pics[picID],
 				ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
 				element;
-			if (['gif'].indexOf(ext) !== -1) {
+			if (['gif'].indexOf(ext.toLowerCase()) !== -1) {
 				element = document.createElement('canvas');
 				var context = element.getContext('2d'),
 					img = new Image();
@@ -77,7 +77,7 @@
 					$item.width(element.width);
 				};
 				img.src = pic.path;
-			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext) !== -1) {
+			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
 				element = document.createElement('video');
 				element.autoplay = false;
 				element.controls = false;
@@ -111,7 +111,7 @@
 					pic = MAP.pics[picID],
 					ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
 					title = pic.tags.join(' ');
-				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext) !== -1) {
+				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
 					var video = document.createElement('video');
 					video.autoplay = true;
 					video.controls = true;

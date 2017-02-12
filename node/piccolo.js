@@ -151,7 +151,7 @@ if (action === '--rehash' || action === '-r') {
 		hashMap[digest].forEach(function (filepath) {
 			var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 			fileTags.forEach(function (tag) {
-				if (/^[a-zA-Z0-9\'\"\-\_]+$/g.test(tag) && !(tag.length === 32 && /^[a-z0-9]+$/g.test(tag)) && array.indexOf(tag) === -1) {
+				if (/^[a-zA-Z0-9èéàòùç\'\"\-\_]+$/g.test(tag) && !(/^[0-9no\_]+$/g.test(tag)) && !(tag.length === 32 && /^[a-z0-9]+$/g.test(tag)) && array.indexOf(tag) === -1) {
 					array.push(tag);
 				}
 			});
