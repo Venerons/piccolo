@@ -26,9 +26,9 @@ Available Actions:
 };
 
 var tagsSorting = function (a, b) {
-	if (a.length === 32 && /^[a-z0-9]+$/g.test(a)) {
+	if (/^[a-f0-9]{32}$/g.test(a)) {
 		return -1;
-	} else if (b.length === 32 && /^[a-z0-9]+$/g.test(b)) {
+	} else if (/^[a-f0-9]{32}$/g.test(b)) {
 		return 1;
 	} else if (a.toLowerCase() < b.toLowerCase()) {
 		return -1;
@@ -151,7 +151,8 @@ if (action === '--rehash' || action === '-r') {
 		hashMap[digest].forEach(function (filepath) {
 			var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 			fileTags.forEach(function (tag) {
-				if (/^[a-zA-Z0-9èéàòùç\'\"\-\_]+$/g.test(tag) && !(/^[0-9no\_]+$/g.test(tag)) && !(tag.length === 32 && /^[a-z0-9]+$/g.test(tag)) && array.indexOf(tag) === -1) {
+				// /^[a-zA-Z0-9àèéìòùç\'\"\-\_]+$/g.test(tag)
+				if (!(/(^[0-9no\-\_]+$|^IMG|^DSC)/g.test(tag)) && !(/^[a-f0-9]{32}$/g.test(tag)) && array.indexOf(tag) === -1) {
 					array.push(tag);
 				}
 			});
