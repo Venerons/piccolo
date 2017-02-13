@@ -138,6 +138,15 @@
 					};
 					image.src = pic.path;
 				}
+				var $footer = $('#dialog-pic-footer').empty();
+				pic.tags.forEach(function (tag) {
+					var $badge = $('<div class="badge"></div>');
+					$badge.text(tag.replace(/\_/g, ' ') + ' (' + MAP.tags[tag].length + ')');
+					$badge.on('click', function () {
+						Piccolo.filter(MAP.tags[tag]);
+					});
+					$footer.append($badge);
+				});
 				$('.backdrop, #dialog-pic').show();
 			});
 		},
@@ -167,7 +176,7 @@
 				timeout = setTimeout(later, wait);
 				if (callNow) func.apply(context, args);
 			};
-		};
+		}
 	};
 
 	window.Piccolo = Piccolo;
