@@ -47,9 +47,7 @@
 				return MAP.pics[a].ts > MAP.pics[b].ts ? -1 : 1;
 			}).forEach(function (picID) {
 				var lazy = true,
-					pic = MAP.pics[picID],
-					title = pic.tags.join(' '),
-					$container = $('<div class="item" title="' + title + '" data-pic="' + picID + '"' + (lazy ? ' data-lazy' : '') + '></div>');
+					$container = $('<div class="item" data-pic="' + picID + '"' + (lazy ? ' data-lazy' : '') + '></div>');
 				if (!lazy) {
 					$container.append(Piccolo.renderThumbnail(picID));
 				}
@@ -72,8 +70,9 @@
 					img = new Image();
 				img.onload = function () {
 					element.height = ELEMENT_HEIGHT;
-					element.width = ELEMENT_HEIGHT * img.width / img.height;
+					element.width = ELEMENT_HEIGHT * img.naturalWidth / img.naturalHeight;
 					context.drawImage(img, 0, 0, element.width, element.height);
+					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
 					$item.width(element.width);
 				};
 				img.src = pic.path;
@@ -83,16 +82,20 @@
 				element.controls = false;
 				element.loop = true;
 				element.muted = true;
-				element.onmouseover = function () {
+				element.addEventListener('mouseover', function () {
 					element.play();
-				};
-				element.onmouseout = function () {
+				});
+				element.addEventListener('mouseout', function () {
 					element.pause();
-				};
+				});
+				element.addEventListener('loadedmetadata', function () {
+					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+				});
 				element.src = pic.path;
 			} else {
 				element = new Image();
 				element.onload = function () {
+					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
 					$item.width(element.width);
 				};
 				element.src = pic.path;
@@ -109,31 +112,30 @@
 				var $item = $(this),
 					picID = $item.data('pic'),
 					pic = MAP.pics[picID],
-					ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
-					title = pic.tags.join(' ');
+					ext = pic.path.substring(pic.path.lastIndexOf('.') + 1);
 				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
 					var video = document.createElement('video');
 					video.autoplay = true;
 					video.controls = true;
 					video.loop = true;
 					video.addEventListener('loadedmetadata', function () {
+						video.setAttribute('title', video.videoWidth + 'x' + video.videoHeight + ' ' + pic.tags.join(' '));
 						if (video.videoHeight > window.innerHeight * 0.9) {
 							video.style.maxHeight = '100%';
 						}
 						$('#dialog-pic-content').html(video);
 					});
-					video.setAttribute('title', title);
 					video.src = pic.path;
 					//$('#dialog-pic-content').html('<video src="' + pic.path + '" autoplay loop controls style="max-width: 100%; max-height: 100%" title="' + title + '"></video>');
 				} else {
 					var image = new Image();
 					image.onload = function () {
+						image.setAttribute('title', image.naturalWidth + 'x' + image.naturalHeight + ' ' + pic.tags.join(' '));
 						if (image.naturalHeight > window.innerHeight * 0.9) {
 							image.style.maxHeight = '100%';
 						}
 						$('#dialog-pic-content').html(image);
 					};
-					image.setAttribute('title', title);
 					image.src = pic.path;
 				}
 				$('.backdrop, #dialog-pic').show();
@@ -151,7 +153,21 @@
 					$(item).append(element);
 				}
 			});
-		}
+		},
+		debounce: function (func, wait, immediate) {
+			var timeout;
+			return function() {
+				var context = this, args = arguments;
+				var later = function() {
+					timeout = null;
+					if (!immediate) func.apply(context, args);
+				};
+				var callNow = immediate && !timeout;
+				clearTimeout(timeout);
+				timeout = setTimeout(later, wait);
+				if (callNow) func.apply(context, args);
+			};
+		};
 	};
 
 	window.Piccolo = Piccolo;
@@ -162,22 +178,7 @@ $('.backdrop').on('click', function () {
 	$('#dialog-pic-content').empty();
 });
 
-var debounce = function (func, wait, immediate) {
-	var timeout;
-	return function() {
-		var context = this, args = arguments;
-		var later = function() {
-			timeout = null;
-			if (!immediate) func.apply(context, args);
-		};
-		var callNow = immediate && !timeout;
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
-		if (callNow) func.apply(context, args);
-	};
-};
-
-var onwheel = debounce(function () {
+var onwheel = Piccolo.debounce(function () {
 	Piccolo.processScroll();
 }, 250);
 document.addEventListener('wheel', onwheel);
