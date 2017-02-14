@@ -17,18 +17,18 @@
 		<button id="header-showtags" title="Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
 		<input id="header-search" type="search" list="header-tags" placeholder="Tag..." disabled style="flex: 1; margin-right: 1rem">
 		<button id="header-edit" title="Edit" disabled><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
-		<button id="header-load" title="Load Map"><i class="icon-load"></i>&nbsp;&nbsp;Load</button>
+		<button id="header-load" title="Load Map"><i class="icon-upload"></i>&nbsp;&nbsp;Load</button>
 		<input id="header-load-file" type="file" accept=".json,application/json" hidden>
 	</header>
 	<header id="toolbar" style="display: none">
 		<input id="toolbar-tags" type="text" list="header-tags" placeholder="Tag,tag..." style="flex: 1; margin-right: 1rem">
 		<button id="toolbar-add" title="Add Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Add Tags</button>
 		<button id="toolbar-remove" title="Remove Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Remove Tags</button>
-		<button id="toolbar-delete" title="Delete"><i class="icon-tags"></i>&nbsp;&nbsp;Delete</button>
+		<button id="toolbar-delete" title="Delete"><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
 	</header>
 	<p id="main-start" class="screen-center">
 		<a onclick="$('#header-load-file').click()">
-			<i class="icon-load" style="font-size: 2rem"></i>
+			<i class="icon-upload" style="font-size: 2rem"></i>
 			<br>
 			<br>
 			Start by loading a map.
@@ -60,7 +60,7 @@
 		</div>
 		<div id="dialog-tags-content" class="dialog-content"></div>
 		<div class="dialog-footer">
-			<button id="dialog-tags-random">Random</button>
+			<button id="dialog-tags-random"><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
 			<button id="dialog-tags-close">Close</button>
 		</div>
 	</div>
