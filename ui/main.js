@@ -226,6 +226,11 @@ $('#header-load-file').on('change', function () {
 	Piccolo.loadMap(file);
 });
 
+$('#dialog-pic').on('click', function () {
+	$('.backdrop, .dialog').hide();
+	$('#dialog-pic-content').empty();
+});
+
 $('#header-edit').on('click', function () {
 	if (window.EDIT_MODE) {
 		delete window.EDIT_MODE;
