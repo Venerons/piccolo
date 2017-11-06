@@ -152,7 +152,8 @@ if (action === '--rehash' || action === '-r') {
 			var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 			fileTags.forEach(function (tag) {
 				// /^[a-zA-Z0-9àèéìòùç\'\"\-\_]+$/g.test(tag)
-				if (!(/(^[0-9no\-\_]+$|^IMG|^DSC)/g.test(tag)) && !(/^[a-f0-9]{32}$/g.test(tag)) && array.indexOf(tag) === -1) {
+				tag = tag.trim();
+				if (tag !== '' && !(/(^[0-9no\-\_]+$|^IMG|^DSC|^Screenshot|^Schermata)/g.test(tag)) && !(/^[a-f0-9]{32}$/g.test(tag)) && array.indexOf(tag) === -1) {
 					array.push(tag);
 				}
 			});
@@ -161,7 +162,8 @@ if (action === '--rehash' || action === '-r') {
 		hashMap[digest].forEach(function (filepath, index) {
 			if (index === 0) {
 				var newFileName = digest + (array.length !== 0 ? ' ' + array.join(' ') : '');
-				if (newFileName.length + path.extname(filepath) > 255) {
+				if (newFileName.length + path.extname(filepath).length > 255) {
+					console.log('Name "' + newFileName + '" too long, reduced to "' + digest + '"');
 					newFileName = digest;
 				}
 				if (newFileName !== path.basename(filepath, path.extname(filepath))) {
