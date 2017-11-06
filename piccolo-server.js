@@ -10,42 +10,66 @@ const port = process.argv[2] ? parseInt(process.argv[2], 10) : 3000;
 const server = http.createServer((request, response) => {
 	//console.log('request.httpVersion', request.httpVersion);
 	//console.log('request.method', request.method);
-	console.log('request.url', request.url);
+	//console.log('request.url', request.url);
 	//console.log('request.headers', request.headers);
 
 	const parsed_url = new URL(`http://${hostname}:${port}${request.url}`);
 
 	if (parsed_url.pathname === '/') {
+		// INDEX
+		console.log(request.method, path.resolve(__dirname, 'index.html'));
+		fs.readFile(path.resolve(__dirname, 'index.html'), 'UTF-8', function (error, file) {
+			if (error) {
+				returnHTTPError(response, 500, error);
+			} else {
+				response.statusCode = 200;
+				response.statusMessage = 'OK';
+				response.setHeader('Content-Type', 'text/html');
+				response.end(file);
+			}
+		});
+	} else if (parsed_url.pathname === '/api') {
+		// API
 		response.statusCode = 200;
 		response.statusMessage = 'OK';
-		response.setHeader('Content-Type', 'text/html');
-		response.end('<html><head><meta charset="utf-8"><title>Piccolo</title></head><body><h1>Piccolo</h1></body></html>\n');
-	} else if (parsed_url.pathname === '/rehash') {
-		const request_path = parsed_url.searchParams.get('path');
-		if (!request_path) {
-			returnHTTPError(response, 500, 'Internal Error');
+		response.setHeader('Content-Type', 'application/json');
+		const action = parsed_url.searchParams.get('action');
+		if (!action) {
+			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
+		} else if (action === 'rehash') {
+			const request_path = parsed_url.searchParams.get('path');
+			if (!request_path) {
+				response.end('{"status":"error","error":"INVALID_PATH"}\n');
+			} else {
+				var filesList = getFilesList(request_path);
+				rehash(filesList);
+				response.end('{"status":"ok"}\n');
+			}
+		} else if (action === 'map') {
+			const request_path = parsed_url.searchParams.get('path');
+			if (!request_path) {
+				response.end('{"status":"error","error":"INVALID_PATH"}\n');
+			} else {
+				var filesList = getFilesList(request_path),
+					json = getMap(filesList);
+				response.end(JSON.stringify({ status: 'ok', map: json }) + '\n');
+			}
 		} else {
-			var filesList = getFilesList(request_path);
-			rehash(filesList);
-			response.statusCode = 200;
-			response.statusMessage = 'OK';
-			response.setHeader('Content-Type', 'application/json');
-			response.end('{"status":"ok"}\n');
-		}
-	} else if (parsed_url.pathname === '/map') {
-		const request_path = parsed_url.searchParams.get('path');
-		if (!request_path) {
-			returnHTTPError(response, 500, 'Internal Error');
-		} else {
-			var filesList = getFilesList(request_path),
-				json = getMap(filesList);
-			response.statusCode = 200;
-			response.statusMessage = 'OK';
-			response.setHeader('Content-Type', 'application/json');
-			response.end(JSON.stringify(json) + '\n');
+			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
 		}
 	} else {
-		returnHTTPError(response, 404, 'Not Found');
+		// FS SERVER
+		console.log(request.method, path.resolve(__dirname, parsed_url.pathname.substring(1)));
+		fs.readFile(path.resolve(__dirname, parsed_url.pathname.substring(1)), 'binary', function (error, file) {
+			if (error) {
+				returnHTTPError(response, 404, 'Not Found');
+			} else {
+				response.statusCode = 200;
+				response.statusMessage = 'OK';
+				response.write(file, 'binary');
+				response.end();
+			}
+		});
 	}
 });
 
