@@ -1,46 +1,43 @@
 (function () {
 
 	var Piccolo = {
-		loadMap: function (file) {
-			var reader = new FileReader();
-			reader.onload = function (e) {
-				try {
-					window.MAP = JSON.parse(e.target.result);
+		loadMap: function (path) {
+			$.ajax({
+				type: 'GET',
+				url: API_URL,
+				data: 'action=map&path=' + encodeURIComponent(path),
+			}).fail(function () {
+				alert('Error');
+			}).done(function (data) {
+				if (data.status !== 'ok') {
+					alert('Error');
+				} else {
+					MAP = data.map;
 					Piccolo.updateTagList();
-					$('#header-search, #header-showtags, #header-randompics, #header-randomtag, #header-edit').prop('disabled', false);
+					$('#header-search, #header-tags, #header-random, #header-edit').prop('disabled', false);
 					$('main').empty();
 					$('#main-start').hide();
 					$('#main-loaded').show();
-				} catch (e) {
-					alert('Error while loading map file.');
 				}
-			};
-			reader.readAsText(file);
+			});
 		},
 		updateTagList: function () {
 			if (!window.MAP) {
 				return;
 			}
-			var datalist = document.getElementById('header-tags');
+			var datalist = document.getElementById('datalist-tags');
 			datalist.innerHTML = '';
-			var dialogTags = document.getElementById('dialog-tags-content');
-			dialogTags.innerHTML = '';
 			Object.keys(MAP.tags).sort().forEach(function (tag) {
 				var option = document.createElement('option');
-				option.value = tag.replace(/\_/g, ' ');
+				option.value = tag;
 				datalist.appendChild(option);
-				var badge = document.createElement('div');
-				badge.classList.add('badge');
-				badge.textContent = tag.replace(/\_/g, ' ') + ' (' + MAP.tags[tag].length + ')';
-				badge.onclick = function () { Piccolo.filter(MAP.tags[tag]); };
-				dialogTags.appendChild(badge);
 			});
 		},
 		filter: function (pics) {
 			if (!window.MAP || !pics) {
 				return;
 			}
-			$('.backdrop, .dialog, #main-loaded').hide();
+			$('#main-loaded').hide();
 			$('#main-loading').show();
 			var $main = $('<main></main>');// $('main').empty();
 			pics.sort(function (a, b) {
@@ -75,7 +72,7 @@
 					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
 					$item.width(element.width);
 				};
-				img.src = pic.path;
+				img.src = PIC_URL + encodeURIComponent(pic.path);
 			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
 				element = document.createElement('video');
 				element.autoplay = false;
@@ -91,20 +88,20 @@
 				element.addEventListener('loadedmetadata', function () {
 					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
 				});
-				element.src = pic.path;
+				element.src = PIC_URL + encodeURIComponent(pic.path);
 			} else {
 				element = new Image();
 				element.onload = function () {
 					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
 					$item.width(element.width);
 				};
-				element.src = pic.path;
+				element.src = PIC_URL + encodeURIComponent(pic.path);
 			}
 			element.height = ELEMENT_HEIGHT;
 			return element;
 		},
 		applyEventListener: function () {
-			$('.item', 'main').on('click', function () {
+			$('main', '.item').on('click', function () {
 				if (window.EDIT_MODE) {
 					$(this).toggleClass('item-selected');
 					return;
@@ -125,7 +122,7 @@
 						}
 						$('#dialog-pic-content').html(video);
 					});
-					video.src = pic.path;
+					video.src = PIC_URL + encodeURIComponent(pic.path);
 					//$('#dialog-pic-content').html('<video src="' + pic.path + '" autoplay loop controls style="max-width: 100%; max-height: 100%" title="' + title + '"></video>');
 				} else {
 					var image = new Image();
@@ -136,7 +133,7 @@
 						}
 						$('#dialog-pic-content').html(image);
 					};
-					image.src = pic.path;
+					image.src = PIC_URL + encodeURIComponent(pic.path);
 				}
 				var $footer = $('#dialog-pic-footer').empty();
 				pic.tags.forEach(function (tag) {
@@ -182,33 +179,20 @@
 	window.Piccolo = Piccolo;
 })();
 
-$('.backdrop').on('click', function () {
-	$('.backdrop, .dialog').hide();
-	$('#dialog-pic-content').empty();
+var API_URL = (location.origin || location.href) + '/api';
+var PIC_URL = (location.origin || location.href) + '/pic?path=';
+var BASE_PATH = null;
+var MAP = null;
+
+$('#header-load').on('click', function () {
+	var path = prompt('Insert absolute path:', BASE_PATH || undefined);
+	if (path) {
+		BASE_PATH = path;
+		Piccolo.loadMap(BASE_PATH);
+	}
 });
 
-var onwheel = Piccolo.debounce(function () {
-	Piccolo.processScroll();
-}, 250);
-document.addEventListener('wheel', onwheel);
-
-$('#header-search').on('change', function () {
-	Piccolo.filter(MAP.tags[$(this).val().replace(/\s/g, '_')]);
-});
-
-$('#header-showtags').on('click', function () {
-	$('.backdrop, #dialog-tags').show();
-});
-$('#dialog-tags-random').on('click', function () {
-	var tags = Object.keys(MAP.tags),
-		tag = tags[Math.floor(Math.random() * tags.length)];
-	Piccolo.filter(MAP.tags[tag]);
-});
-$('#dialog-tags-close').on('click', function () {
-	$('.backdrop, #dialog-tags').hide();
-});
-
-$('#header-randompics').on('click', function () {
+$('#header-random').on('click', function () {
 	var pics = [],
 		picsHash = Object.keys(MAP.pics);
 	for (var i = 0; i < 30; ++i) {
@@ -217,19 +201,16 @@ $('#header-randompics').on('click', function () {
 	Piccolo.filter(pics);
 });
 
-$('#header-load').on('click', function () {
-	$('#header-load-file').click();
+$('#header-search').on('change', function () {
+	Piccolo.filter(MAP.tags[$(this).val()]);
 });
 
-$('#header-load-file').on('change', function () {
-	var file = $(this).get(0).files[0];
-	Piccolo.loadMap(file);
-});
+var onwheel = Piccolo.debounce(function () {
+	Piccolo.processScroll();
+}, 250);
+document.addEventListener('wheel', onwheel);
 
-$('#dialog-pic').on('click', function () {
-	$('.backdrop, .dialog').hide();
-	$('#dialog-pic-content').empty();
-});
+/*
 
 $('#header-edit').on('click', function () {
 	if (window.EDIT_MODE) {
@@ -310,6 +291,8 @@ var exportCommands = function (scriptpath) {
 	commands = [];
 	console.info(output);
 };
+
+*/
 
 /*
 var dropbox = document.getElementById('dropbox');

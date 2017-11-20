@@ -37,6 +37,7 @@ const server = http.createServer((request, response) => {
 		if (!action) {
 			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
 		} else if (action === 'rehash') {
+			// REHASH
 			const request_path = parsed_url.searchParams.get('path');
 			if (!request_path) {
 				response.end('{"status":"error","error":"INVALID_PATH"}\n');
@@ -46,6 +47,7 @@ const server = http.createServer((request, response) => {
 				response.end('{"status":"ok"}\n');
 			}
 		} else if (action === 'map') {
+			// MAP
 			const request_path = parsed_url.searchParams.get('path');
 			if (!request_path) {
 				response.end('{"status":"error","error":"INVALID_PATH"}\n');
@@ -54,18 +56,69 @@ const server = http.createServer((request, response) => {
 					json = getMap(filesList);
 				response.end(JSON.stringify({ status: 'ok', map: json }) + '\n');
 			}
+		} else if (action === 'tags') {
+			// ADD / REMOVE TAGS
+			const request_path = parsed_url.searchParams.get('path');
+			const request_pics = parsed_url.searchParams.get('pics');
+			const request_add = parsed_url.searchParams.get('add');
+			const request_remove = parsed_url.searchParams.get('remove');
+			if (!request_path || !request_pics || !request_add || !request_remove) {
+				response.end('{"status":"error","error":"INVALID_PATH"}\n');
+			} else {
+				var filesList = [];
+				JSON.parse(request_pics).forEach(function (item) {
+					filesList.push(request_path + path.sep + item);
+				});
+				var add = JSON.parse(request_add),
+					remove = JSON.parse(request_remove);
+				if (add.length > 0) {
+					addTags(filesList, add);
+				}
+				if (remove.length > 0) {
+					removeTags(filesList, remove);
+				}
+				response.end(JSON.stringify({ status: 'ok' }) + '\n');
+			}
 		} else {
 			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
+		}
+	} else if (parsed_url.pathname === '/pic') {
+		// PIC
+		const request_path = parsed_url.searchParams.get('path');
+		if (!request_path) {
+			returnHTTPError(response, 404, 'Not Found');
+		} else {
+			var ext = path.extname(request_path),
+				mime = mimeTypeMap.extensions[ext];
+			fs.readFile(request_path, 'binary', function (error, file) {
+				if (error) {
+					returnHTTPError(response, 404, 'Not Found');
+				} else {
+					response.statusCode = 200;
+					response.statusMessage = 'OK';
+					if (mime) {
+						response.setHeader('Content-Type', mime[0]);
+					}
+					response.write(file, 'binary');
+					response.end();
+				}
+			});
 		}
 	} else {
 		// FS SERVER
 		console.log(request.method, path.resolve(__dirname, parsed_url.pathname.substring(1)));
-		fs.readFile(path.resolve(__dirname, parsed_url.pathname.substring(1)), 'binary', function (error, file) {
+		var filename = path.resolve(__dirname, parsed_url.pathname.substring(1)),
+			ext = path.extname(filename),
+			mime = mimeTypeMap.extensions[ext];
+		fs.readFile(filename, 'binary', function (error, file) {
 			if (error) {
 				returnHTTPError(response, 404, 'Not Found');
 			} else {
 				response.statusCode = 200;
 				response.statusMessage = 'OK';
+				if (mime) {
+					response.setHeader('Content-Type', mime[0]);
+				}
 				response.write(file, 'binary');
 				response.end();
 			}
@@ -75,6 +128,17 @@ const server = http.createServer((request, response) => {
 
 server.listen(port, hostname, () => {
 	console.log(`Server running at http://${hostname}:${port}/\nCTRL + C to shutdown`);
+});
+
+// MIME TYPE MAP
+
+var mimeTypeMap = {};
+fs.readFile(path.resolve(__dirname, 'mime-map.json'), 'UTF-8', function (error, file) {
+	if (error) {
+		console.log('Warning: mime-map.json loading failed');
+	} else {
+		mimeTypeMap = JSON.parse(file);
+	}
 });
 
 // RETURN HTTP ERROR
@@ -150,9 +214,6 @@ var rehash = function (filesList) {
 		var digest = crypto.createHash('md5').update(fs.readFileSync(filepath)).digest('hex'); // .substring(0, 6);
 		if (hashMap[digest]) {
 			hashMap[digest].push(filepath);
-			if (!bar) {
-				console.log('Found duplicate file ' + path.basename(filepath));
-			}
 		} else {
 			hashMap[digest] = [filepath];
 		}
