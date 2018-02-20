@@ -340,3 +340,68 @@ var getMap = function (filesList) {
 	console.log('JSON map generated');
 	return json;
 };
+
+// ###########################################################################
+
+// GET TAGS LIST
+
+var getTagsList = function (filesList) {
+	console.log('getTagsList...');
+	var labels = [],
+		count = [];
+	filesList.forEach(function (filepath, index) {
+		var picTags = path.basename(filepath, path.extname(filepath)).split(' ');
+		picTags.splice(0, 1);
+		picTags.forEach(function (tag) {
+			var index = labels.indexOf(tag);
+			if (index === -1) {
+				labels.push(tag);
+				count.push(1);
+			} else {
+				count[index]++;
+			}
+		});
+	});
+	var tags = [];
+	labels.forEach(function (tag, index) {
+		tags.push({
+			label: tag,
+			count: count[index]
+		});
+	})
+	tags.sort(function (a, b) {
+		return a.label < b.label ? -1 : 1;
+	});
+	console.log('getTagsList DONE');
+	return tags;
+};
+
+// GET PICS LIST
+
+var getPicsList = function (filesList, tags) {
+	console.log('getPicsList...');
+	var pics = [];
+	filesList.forEach(function (filepath, index) {
+		var picTags = path.basename(filepath, path.extname(filepath)).split(' '),
+			hash = picTags[0];
+		picTags.splice(0, 1);
+		var match = true;
+		tags.forEach(function (tag) {
+			match = match && picTags.includes(tag);
+		});
+		if (match) {
+			var stats = fs.statSync(filepath);
+			pics.push({
+				hash: hash,
+				path: filepath,
+				tags: picTags,
+				ts: stats.birthtime.getTime()
+			});
+		}
+	});
+	pics.sort(function (a, b) {
+		return a.ts > b.ts ? -1 : 1;
+	});
+	console.log('getPicsList DONE');
+	return pics;
+};
