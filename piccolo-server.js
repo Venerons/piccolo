@@ -5,7 +5,13 @@ const fs = require('fs');
 const path = require('path');
 
 const hostname = '127.0.0.1';
-const port = process.argv[2] ? parseInt(process.argv[2], 10) : 3000;
+const port = process.argv[3] ? parseInt(process.argv[3], 10) : 3000;
+const pics_path = process.argv[2]
+
+// node piccolo-server.js <pics_path> <port>
+// Examples:
+// node piccolo-server.js "/home/Admin/Images"
+// node piccolo-server.js "/home/Admin/Images" 8080
 
 const server = http.createServer((request, response) => {
 	//console.log('request.httpVersion', request.httpVersion);
@@ -35,39 +41,46 @@ const server = http.createServer((request, response) => {
 		response.setHeader('Content-Type', 'application/json');
 		const action = parsed_url.searchParams.get('action');
 		if (!action) {
-			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
+			response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 		} else if (action === 'rehash') {
-			// REHASH
-			const request_path = parsed_url.searchParams.get('path');
-			if (!request_path) {
-				response.end('{"status":"error","error":"INVALID_PATH"}\n');
+			// REHASH - ?action=rehash
+			var filesList = getFilesList(pics_path);
+			rehash(filesList);
+			response.end('{"status":"ok"}\n');
+		} else if (action === 'list') {
+			// LIST TAGS - ?action=list&target=tags
+			// LIST PICS - ?action=list&target=pics&tags=tag1,tag2
+			const request_target = parsed_url.searchParams.get('target');
+			if (!request_target) {
+				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
+			} else if (request_target === 'tags') {
+				var filesList = getFilesList(pics_path),
+					json = getTagsList(filesList);
+				response.end(JSON.stringify({ status: 'ok', tags: json }) + '\n');
+			} else if (request_target === 'pics') {
+				const request_tags = parsed_url.searchParams.get('tags');
+				var filesList = getFilesList(pics_path),
+					tags = [];
+				if (request_tags) {
+					tags = request_tags.split(',');
+				}
+				var json = getPicsList(filesList, tags);
+				response.end(JSON.stringify({ status: 'ok', pics: json }) + '\n');
 			} else {
-				var filesList = getFilesList(request_path);
-				rehash(filesList);
-				response.end('{"status":"ok"}\n');
-			}
-		} else if (action === 'map') {
-			// MAP
-			const request_path = parsed_url.searchParams.get('path');
-			if (!request_path) {
-				response.end('{"status":"error","error":"INVALID_PATH"}\n');
-			} else {
-				var filesList = getFilesList(request_path),
-					json = getMap(filesList);
-				response.end(JSON.stringify({ status: 'ok', map: json }) + '\n');
+				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 			}
 		} else if (action === 'tags') {
-			// ADD / REMOVE TAGS
-			const request_path = parsed_url.searchParams.get('path');
+			// ADD TAGS - ?action=tags&pics=<pics>&add=<tags>
+			// REMOVE TAGS - ?action=tags&pics=<pics>&remove=<tags>
 			const request_pics = parsed_url.searchParams.get('pics');
 			const request_add = parsed_url.searchParams.get('add');
 			const request_remove = parsed_url.searchParams.get('remove');
-			if (!request_path || !request_pics || !request_add || !request_remove) {
-				response.end('{"status":"error","error":"INVALID_PATH"}\n');
+			if (!request_pics || !request_add || !request_remove) {
+				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 			} else {
 				var filesList = [];
 				JSON.parse(request_pics).forEach(function (item) {
-					filesList.push(request_path + path.sep + item);
+					filesList.push(pics_path + path.sep + item);
 				});
 				var add = JSON.parse(request_add),
 					remove = JSON.parse(request_remove);
@@ -80,7 +93,7 @@ const server = http.createServer((request, response) => {
 				response.end(JSON.stringify({ status: 'ok' }) + '\n');
 			}
 		} else {
-			response.end('{"status":"error","error":"ACTION_NOT_SUPPORTED"}\n');
+			response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 		}
 	} else if (parsed_url.pathname === '/pic') {
 		// PIC
@@ -90,7 +103,7 @@ const server = http.createServer((request, response) => {
 		} else {
 			var ext = path.extname(request_path),
 				mime = mimeTypeMap.extensions[ext];
-			fs.readFile(request_path, 'binary', function (error, file) {
+			fs.readFile(pics_path + path.sep + request_path, 'binary', function (error, file) {
 				if (error) {
 					returnHTTPError(response, 404, 'Not Found');
 				} else {
@@ -263,86 +276,6 @@ var rehash = function (filesList) {
 	console.log(duplicateCount + ' duplicated files has been removed.');
 };
 
-// ADD TAGS
-
-var addTags = function (filesList, tags) {
-	console.log('Adding tags', tags);
-	filesList.forEach(function (filepath, index) {
-		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
-		tags.forEach(function (tag) {
-			if (fileTags.indexOf(tag) === -1) {
-				fileTags.push(tag);
-			}
-		});
-		fileTags.sort(tagsSorting);
-		var newFileName = fileTags.join(' ');
-		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
-		}
-	});
-	console.log('Tags added.');
-};
-
-// REMOVE TAGS
-
-var removeTags = function (filesList, tags) {
-	console.log('Removing tags', tags);
-	filesList.forEach(function (filepath, index) {
-		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
-		for (var i = 0; i < fileTags.length; ++i) {
-			if (tags.indexOf(fileTags[i]) !== -1) {
-				fileTags.splice(i, 1);
-				i--;
-			}
-		}
-		fileTags.sort(tagsSorting);
-		var newFileName = fileTags.join(' ');
-		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
-		}
-	});
-	console.log('Tags removed.');
-};
-
-// MAP
-
-var getMap = function (filesList) {
-	console.log('Generating JSON map...');
-	var json = {
-		pics: {},
-		tags: {
-			'TAGME': []
-		}
-	};
-	filesList.forEach(function (filepath, index) {
-		var tags = path.basename(filepath, path.extname(filepath)).split(' '),
-			hash = tags[0];
-		tags.splice(0, 1);
-		var stats = fs.statSync(filepath);
-		json.pics[hash] = {
-			//hash: hash,
-			path: filepath,
-			tags: tags,
-			ts: stats.birthtime.getTime()
-		};
-		if (tags.length === 0) {
-			json.tags.TAGME.push(hash);
-		} else {
-			tags.forEach(function (tag) {
-				if (!json.tags[tag]) {
-					json.tags[tag] = [hash];
-				} else {
-					json.tags[tag].push(hash);
-				}
-			});
-		}
-	});
-	console.log('JSON map generated');
-	return json;
-};
-
-// ###########################################################################
-
 // GET TAGS LIST
 
 var getTagsList = function (filesList) {
@@ -404,4 +337,45 @@ var getPicsList = function (filesList, tags) {
 	});
 	console.log('getPicsList DONE');
 	return pics;
+};
+
+// ADD TAGS
+
+var addTags = function (filesList, tags) {
+	console.log('Adding tags', tags);
+	filesList.forEach(function (filepath, index) {
+		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
+		tags.forEach(function (tag) {
+			if (fileTags.indexOf(tag) === -1) {
+				fileTags.push(tag);
+			}
+		});
+		fileTags.sort(tagsSorting);
+		var newFileName = fileTags.join(' ');
+		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
+			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
+		}
+	});
+	console.log('Tags added.');
+};
+
+// REMOVE TAGS
+
+var removeTags = function (filesList, tags) {
+	console.log('Removing tags', tags);
+	filesList.forEach(function (filepath, index) {
+		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
+		for (var i = 0; i < fileTags.length; ++i) {
+			if (tags.indexOf(fileTags[i]) !== -1) {
+				fileTags.splice(i, 1);
+				i--;
+			}
+		}
+		fileTags.sort(tagsSorting);
+		var newFileName = fileTags.join(' ');
+		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
+			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
+		}
+	});
+	console.log('Tags removed.');
 };
