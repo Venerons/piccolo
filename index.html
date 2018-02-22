@@ -6,37 +6,546 @@
 	<meta name="application-name" content="Piccolo">
 	<meta name="viewport" content="width=device-width">
 
-	<link rel="stylesheet" href="main.min.css">
 	<link rel="stylesheet" href="icons.css">
+
+	<style type="text/css">
+		*, *::before, *::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			font: 400 normal 16px/1.2 'Open Sans', sans-serif;
+			color: whitesmoke;
+			background: #333;
+		}
+		:disabled {
+			opacity: 0.5;
+			pointer-events: none;
+		}
+		input[type=text],
+		input[type=search] {
+			padding: 0.5rem;
+			font: inherit;
+			color: black;
+			background: whitesmoke;
+			border: 1px solid dodgerblue;
+		}
+		input[type=search] {
+			min-height: 3rem;
+			font: inherit;
+			color: whitesmoke;
+			background: transparent;
+			border: none;
+		}
+		input[type=checkbox] {
+			cursor: pointer;
+		}
+		button {
+			min-width: 57px;
+			min-height: 3rem;
+			margin: 0.5rem;
+			padding: 0.5rem 1rem;
+			font: inherit;
+			color: dodgerblue;
+			background: transparent;
+			cursor: pointer;
+			border: none;
+			border-radius: 4px;
+		}
+		button:hover,
+		button:focus {
+			color: whitesmoke;
+			background: dodgerblue;
+		}
+		button:active {
+			color: dodgerblue;
+			background: whitesmoke;
+		}
+		a {
+			color: dodgerblue;
+			cursor: pointer;
+		}
+		body {
+			display: flex;
+			flex-flow: column nowrap;
+		}
+		.flex-row{
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: center;
+			align-content: center;
+		}
+		.header {
+			display: flex;
+			flex-flow: row nowrap;
+			align-items: center;
+			padding: 0 1rem;
+			background: #222;
+			border-bottom: 2px solid dodgerblue;
+			box-shadow: 0px 3px 5px 0px black;
+			z-index: 100;
+		}
+		/*
+		.header-buttons {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+		}
+		*/
+		.page {
+			flex: 1;
+		}
+		.container-pics {
+			display: flex;
+			flex-flow: row wrap;
+			align-content: flex-start;
+			align-items: flex-start;
+			justify-content: flex-start;
+		}
+		.pic {
+			position: relative;
+			width: 100px;
+			height: 100px;
+			background: #222;
+			margin: 1px;
+		}
+		.pic-content > img,
+		.pic-content > canvas,
+		.pic-content > video {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			max-width: 100%;
+			max-height: 100%;
+		}
+		.pic-toolbar {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			background: rgba(0, 0, 0, 0.5);
+		}
+		.preview {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 200;
+			background: rgba(0, 0, 0, 0.9);
+		}
+		.preview-toolbar {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			z-index: 202;
+			background: rgba(0, 0, 0, 0.5);
+			display: flex;
+			flex-flow: row nowrap;
+			align-items: center;
+		}
+		.preview-container {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 201;
+		}
+		.preview-container > img,
+		.preview-container > video {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			max-width: 100%;
+			max-height: 100%;
+		}
+	</style>
 </head>
 <body>
 	<datalist id="datalist-tags"></datalist>
-	<header>
-		<button id="header-load" title="Load"><i class="icon-upload"></i>&nbsp;&nbsp;Load</button>
-		<button id="header-random" title="Random" disabled><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
-		<button id="header-tags" title="Tags" disabled><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
+
+	<header class="header">
 		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
-		<button id="header-edit" title="Edit" disabled><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>		
+		<div class="header-buttons">
+			<button id="header-tags" title="Tags"><i class="icon-tags"></i></button>
+			<button id="header-random" title="Random"><i class="icon-random"></i></button>
+			<button id="header-upload" title="Upload"><i class="icon-upload"></i></button>
+			<button id="header-edit" title="Edit"><i class="icon-edit"></i></button>
+		</div>		
 	</header>
-	<header id="toolbar" style="display: none">
-		<input id="toolbar-tags" type="text" list="datalist-tags" placeholder="Tag,tag..." style="flex: 1">
-		<button id="toolbar-add" title="Add Tags" disabled><i class="icon-tag-add"></i>&nbsp;&nbsp;Add Tags</button>
-		<button id="toolbar-remove" title="Remove Tags" disabled><i class="icon-tag-remove"></i>&nbsp;&nbsp;Remove Tags</button>
-		<button id="toolbar-delete" title="Delete"><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
-	</header>
-	<p id="main-start" class="screen-center">
-		<a onclick="$('#header-load').click()">
-			<i class="icon-upload" style="font-size: 2rem"></i>
-			<br>
-			<br>
-			Start by loading.
-		</a>
-	</p>
-	<p id="main-loaded" class="screen-center" style="display: none">Good! Now search a tag and enjoy!</p>
-	<p id="main-loading" class="screen-center" style="display: none"><i class="icon-loading" style="font-size: 2rem"></i><br><br>Loading...</p>
-	<main></main>
+
+	<div id="container-tags" class="page" style="display: none">
+		<div class="flex-row">
+			<button id="tags-random" title="Random" disabled><i class="icon-random"></i></button>
+		</div>
+		<ul id="tags-list"></ul>
+	</div>
+
+	<div id="container-pics" class="page container-pics" style="display: none"></div>
+
+	<div id="preview" class="preview" style="display: none">
+		<div class="preview-toolbar">
+			<button id="preview-toolbar-back"><i class="icon-back"></i></button>
+			<div style="flex: 1"></div>
+			<button id="preview-toolbar-edit" disabled><i class="icon-edit"></i></button>
+		</div>
+		<div class="preview-container">
+			<img src="#">
+		</div>
+	</div>
 
 	<script src="https://cdn.jsdelivr.net/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
-	<script src="main.js"></script>
+	<script type="text/javascript">
+		var getTagsList = function () {
+			var $controls = $('#header-search, #header-tags, #header-random, #header-upload, #header-edit');
+			$controls.prop('disabled', true);
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=list&target=tags',
+				dataType: 'json'
+			}).fail(function () {
+				console.error('getTagsList', 'fail');
+				$controls.prop('disabled', false);
+			}).done(function (data) {
+				$controls.prop('disabled', false);
+				if (data.status !== 'ok') {
+					console.error('getTagsList', data.status, data.error);
+				} else {
+					var $datalist = $('#datalist-tags').empty().data('tags', data.tags),
+						$list = $('#tags-list').empty();
+					data.tags.forEach(function (tag) {
+						$datalist.append('<option value="' + tag.label + '"></option>');
+						var $li = $('<li><a>' + tag.label + ' (' + tag.count + ')</a></li>');
+						$li.data('tag', tag.label);
+						$list.append($li);
+					});
+				}
+			});
+		};
+
+		var getPicsList = function (tags) {
+			var $controls = $('#header-search, #header-tags, #header-random, #header-upload, #header-edit');
+			$controls.prop('disabled', true);
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=list&target=pics&tags=' + tags.join(','),
+				dataType: 'json'
+			}).fail(function () {
+				console.error('getPicsList', 'fail');
+				$controls.prop('disabled', false);
+			}).done(function (data) {
+				$controls.prop('disabled', false);
+				if (data.status !== 'ok') {
+					console.error('getPicsList', data.status, data.error);
+				} else {
+					var $container = $('#container-pics').empty().data('pics', data.pics);
+					data.pics.forEach(function (pic) {
+						var $pic = $(
+							'<div title="' + pic.tags.join(' ') + '" class="pic">' +
+								'<div class="pic-content"></div>' +
+								'<div class="pic-toolbar">' +
+									'<input type="checkbox">' +
+								'</div>' +
+							'</div>');
+						$pic.data('pic', pic);
+
+						var ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
+							element;
+						if (['gif'].indexOf(ext.toLowerCase()) !== -1) {
+							element = document.createElement('canvas');
+							var context = element.getContext('2d'),
+								img = new Image();
+							img.onload = function () {
+								element.height = 100;
+								element.width = element.height * img.naturalWidth / img.naturalHeight;
+								context.drawImage(img, 0, 0, element.width, element.height);
+								element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
+							};
+							img.src = '/pic?path=' + encodeURIComponent(pic.path);
+						} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
+							element = document.createElement('video');
+							element.autoplay = false;
+							element.controls = false;
+							element.loop = true;
+							element.muted = true;
+							element.addEventListener('mouseover', function () {
+								element.play();
+							});
+							element.addEventListener('mouseout', function () {
+								element.pause();
+							});
+							element.addEventListener('loadedmetadata', function () {
+								element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+							});
+							element.src = '/pic?path=' + encodeURIComponent(pic.path);
+						} else {
+							element = new Image();
+							element.onload = function () {
+								element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+							};
+							element.src = '/pic?path=' + encodeURIComponent(pic.path);
+						}
+						$pic.find('.pic-content').append(element);
+						$container.append($pic);
+					});
+					$('.page').hide();
+					$('#container-pics').show();
+				}
+			});
+		};
+
+		$('#header-search').on('change', function () {
+			var pattern = $(this).val().trim();
+			if (pattern === '') {
+				return;
+			}
+			var tags = pattern.split(',').map(function (tag) {
+				return tag.trim();
+			});
+			if (tags.length !== 0) {
+				getPicsList(tags);
+			}
+		});
+		$('#header-tags').on('click', function () {
+			$('.page').hide();
+			$('#container-tags').show();
+		});
+		$('#header-random').on('click', function () {
+			// TODO
+			alert('TODO');
+		});
+		$('#header-upload').on('click', function () {
+			// TODO
+			alert('TODO');
+		});
+		$('#header-edit').on('click', function () {
+			// TODO
+			alert('TODO');
+		});
+
+		$('#tags-list').on('click', 'li', function () {
+			var tag = $(this).data('tag');
+			$('#header-search').val(tag).trigger('change');
+		});
+
+		$('#container-pics').on('click', '.pic', function () {
+			var pic = $(this).data('pic');
+			$('#preview').show();
+
+			var ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
+				element;
+			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
+				element = document.createElement('video');
+				element.autoplay = true;
+				element.controls = true;
+				element.loop = true;
+				element.muted = false;
+				element.addEventListener('loadedmetadata', function () {
+					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+					$('.preview-container').empty().append(element);
+				});
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			} else {
+				element = new Image();
+				element.onload = function () {
+					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+					$('.preview-container').empty().append(element);
+				};
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			}
+		});
+
+		$('#preview-toolbar-back').on('click', function () {
+			$('.preview-container').empty();
+			$('#preview').hide();
+		});
+
+		getTagsList();
+	</script>
+
+	<!--
+	https://github.com/GoogleChrome/dialog-polyfill
+
+	XWEB.dialog = function (settings) {
+		var dialogID = 'dialog-' + Date.now();
+		var $dialog = $(
+			'<dialog id="' + dialogID + '" class="dialog">' +
+				(exists(settings.title) ? '<h3></h3>' : '') +
+				(exists(settings.content) ? '<div class="dialog-content"></div>' : '') +
+				'<div class="dialog-buttonbar"></div>' +
+			'</dialog>');
+		if (exists(settings.width)) {
+			$dialog.width(settings.width);
+		}
+		if (exists(settings.height)) {
+			$dialog.height(settings.height);
+			$dialog.find('.dialog-content').css({ flex: 1 });
+		}
+		if (exists(settings.title)) {
+			$dialog.find('h3').text(settings.title);
+		}
+		if (exists(settings.content)) {
+			$dialog.find('.dialog-content').append(settings.content);
+		}
+		if (exists(settings.buttons)) {
+			if (settings.buttons.length === 0) {
+				$dialog.find('.dialog-content').css({ 'border-bottom': 'none' });
+				$dialog.find('.dialog-buttonbar').remove();
+			} else {
+				settings.buttons.forEach(function (button, index) {
+					var $button = $('<button class="button button-inverted">' + button.label + '</button>');
+					if (exists(button.onclick)) {
+						$button.on('click', function (e) {
+							button.onclick.call($dialog[0], e);
+						});
+					}
+					$dialog.find('.dialog-buttonbar').append($button);
+				});
+			}
+		} else {
+			var $button = $('<button class="button button-inverted" autofocus>' + _('close') + '</button>');
+			$button.on('click', function (e) {
+				$dialog[0].close();
+				$dialog.remove();
+			});
+			$dialog.find('.dialog-buttonbar').append($button);
+		}
+		$('body').append($dialog);
+		var dialog = document.getElementById(dialogID);
+		dialogPolyfill.registerDialog(dialog);
+		dialog.addEventListener('close', function () {
+			$dialog.remove();
+		});
+		dialog.showModal();
+		return dialog;
+	};
+
+	.dialog {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 500px;
+		min-width: 280px;
+		max-width: 95%;
+		height: auto;
+		max-height: 95%;
+		display: flex;
+		flex-flow: column nowrap;
+		justify-content: flex-start;
+		align-items: stretch;
+		align-content: stretch;
+
+		border: none;
+		border-top: 1px solid mix($theme-color-background, white, 90%);
+		box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+		border-radius: 10px;
+		color: $theme-color-text;
+		background: $theme-color-background;
+
+		&::backdrop {
+			background: rgba(0, 0, 0, 0.4);
+		}
+		& + .backdrop {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.4);
+		}
+
+		h3 {
+			padding: 1rem;
+			text-overflow: ellipsis;
+			font-size: 1.2rem;
+			text-align: center;
+			color: $theme-color-main-1;
+		}
+		.dialog-content {
+			padding: 0 1rem 1.5rem;
+			overflow: auto;
+			font-size: 1rem;
+			border-bottom: 1px solid mix($theme-color-background, black, 90%);
+		}
+		.dialog-content-loader {
+			padding: 2.5rem;
+			font-size: 1rem;
+			text-align: center;
+		}
+		.dialog-buttonbar {
+			min-height: 3rem;
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: stretch;
+			align-content: stretch;
+
+			> .button {
+				box-shadow: none;
+				flex: 1;
+				border-top: 1px solid mix($theme-color-background, white, 90%);
+
+				&:first-of-type:last-of-type {
+					border-radius: 0 0 10px 10px;
+				}
+				&:first-of-type:not(:last-of-type) {
+					border-right: 1px solid mix($theme-color-background, black, 90%);
+					border-radius: 0 0 0 10px;
+				}
+				&:not(:first-of-type):not(:last-of-type) {
+					border-right: 1px solid mix($theme-color-background, black, 90%);
+					border-left: 1px solid mix($theme-color-background, white, 90%);
+					border-radius: 0;
+				}
+				&:not(:first-of-type):last-of-type {
+					border-left: 1px solid mix($theme-color-background, white, 90%);
+					border-radius: 0 0 10px 0;
+				}
+			}
+		}
+
+		&.dialog-inverted {
+			color: $theme-color-background;
+			background: $theme-color-main-1;
+			border-top: 1px solid mix($theme-color-main-1, white, 90%);
+
+			h3 {
+				color: inherit;
+			}
+			.dialog-content {
+				border-bottom: 1px solid mix($theme-color-main-1, black, 90%);
+			}
+			.dialog-content-loader {
+				border-bottom: 1px solid mix($theme-color-main-1, black, 90%);
+			}
+			.dialog-buttonbar {
+				> button {
+					border-top: 1px solid mix($theme-color-main-1, white, 90%);
+
+					&:first-of-type:not(:last-of-type) {
+						border-right: 1px solid mix($theme-color-main-1, black, 90%);
+					}
+					&:not(:first-of-type):not(:last-of-type) {
+						border-right: 1px solid mix($theme-color-main-1, black, 90%);
+						border-left: 1px solid mix($theme-color-main-1, white, 90%);
+					}
+					&:not(:first-of-type):last-of-type {
+						border-left: 1px solid mix($theme-color-main-1, white, 90%);
+					}
+				}
+			}
+		}
+	}
+	-->
 </body>
 </html>

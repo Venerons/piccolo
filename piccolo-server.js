@@ -103,6 +103,7 @@ const server = http.createServer((request, response) => {
 		} else {
 			var ext = path.extname(request_path),
 				mime = mimeTypeMap.extensions[ext];
+			console.log('/pic', pics_path + path.sep + request_path);
 			fs.readFile(pics_path + path.sep + request_path, 'binary', function (error, file) {
 				if (error) {
 					returnHTTPError(response, 404, 'Not Found');
@@ -326,7 +327,7 @@ var getPicsList = function (filesList, tags) {
 			var stats = fs.statSync(filepath);
 			pics.push({
 				hash: hash,
-				path: filepath,
+				path: path.basename(filepath),
 				tags: picTags,
 				ts: stats.birthtime.getTime()
 			});
