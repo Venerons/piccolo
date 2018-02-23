@@ -1,9 +1,9 @@
 @font-face {
   font-family: 'piccolo-icons';
   src:
-    url('fonts/piccolo-icons.ttf?wll38x') format('truetype'),
-    url('fonts/piccolo-icons.woff?wll38x') format('woff'),
-    url('fonts/piccolo-icons.svg?wll38x#piccolo-icons') format('svg');
+    url('fonts/piccolo-icons.ttf?qgus5w') format('truetype'),
+    url('fonts/piccolo-icons.woff?qgus5w') format('woff'),
+    url('fonts/piccolo-icons.svg?qgus5w#piccolo-icons') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -23,47 +23,38 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.icon-tag-remove:before {
-  content: "\e90c";
+.icon-left:before {
+  content: "\e900";
 }
-.icon-tag-add:before {
-  content: "\e90d";
-}
-.icon-close:before {
-  content: "\e90e";
-}
-.icon-delete:before {
-  content: "\e90f";
-}
-.icon-edit:before {
-  content: "\e903";
-}
-.icon-random:before {
-  content: "\e906";
-}
-.icon-dice:before {
-  content: "\e90b";
-}
-.icon-spinner:before {
+.icon-right:before {
   content: "\e904";
 }
-.icon-spinner2:before {
-  content: "\e905";
-}
-.icon-refresh:before {
-  content: "\e907";
-}
-.icon-upload2:before {
+.icon-down:before {
   content: "\e908";
 }
-.icon-download2:before {
+.icon-up:before {
   content: "\e909";
 }
 .icon-tags:before {
   content: "\e90a";
 }
-.icon-hour-glass:before {
-  content: "\e900";
+.icon-random:before {
+  content: "\e906";
+}
+.icon-refresh:before {
+  content: "\e907";
+}
+.icon-edit:before {
+  content: "\e903";
+}
+.icon-delete:before {
+  content: "\e90f";
+}
+.icon-close:before {
+  content: "\e90e";
+}
+.icon-loader:before {
+  content: "\e905";
 }
 .icon-upload:before {
   content: "\e901";
@@ -71,4 +62,3 @@
 .icon-download:before {
   content: "\e902";
 }
-
