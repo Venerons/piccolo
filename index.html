@@ -109,10 +109,16 @@
 		}
 		.pic {
 			position: relative;
-			width: 100px;
-			height: 100px;
+			width: 150px;
+			height: 150px;
 			background: #222;
 			margin: 1px;
+		}
+		@media (min-width: 320px) and (max-width: 480px) {
+			.pic {
+				width: 100px;
+				height: 100px;
+			}
 		}
 		.pic-content > img,
 		.pic-content > canvas,
@@ -146,7 +152,7 @@
 			left: 0;
 			width: 100%;
 			z-index: 202;
-			background: rgba(0, 0, 0, 0.5);
+			background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent);
 			display: flex;
 			flex-flow: row nowrap;
 			align-items: center;
@@ -179,6 +185,7 @@
 			<button id="header-tags" title="Tags"><i class="icon-tags"></i></button>
 			<button id="header-random" title="Random"><i class="icon-random"></i></button>
 			<button id="header-upload" title="Upload"><i class="icon-upload"></i></button>
+			<button id="header-rehash" title="Rehash"><i class="icon-refresh"></i></button>
 			<button id="header-edit" title="Edit"><i class="icon-edit"></i></button>
 		</div>		
 	</header>
@@ -247,59 +254,104 @@
 				if (data.status !== 'ok') {
 					console.error('getPicsList', data.status, data.error);
 				} else {
-					var $container = $('#container-pics').empty().data('pics', data.pics);
-					data.pics.forEach(function (pic) {
-						var $pic = $(
-							'<div title="' + pic.tags.join(' ') + '" class="pic">' +
-								'<div class="pic-content"></div>' +
-								'<div class="pic-toolbar">' +
-									'<input type="checkbox">' +
-								'</div>' +
-							'</div>');
-						$pic.data('pic', pic);
-
-						var ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
-							element;
-						if (['gif'].indexOf(ext.toLowerCase()) !== -1) {
-							element = document.createElement('canvas');
-							var context = element.getContext('2d'),
-								img = new Image();
-							img.onload = function () {
-								element.height = 100;
-								element.width = element.height * img.naturalWidth / img.naturalHeight;
-								context.drawImage(img, 0, 0, element.width, element.height);
-								element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
-							};
-							img.src = '/pic?path=' + encodeURIComponent(pic.path);
-						} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
-							element = document.createElement('video');
-							element.autoplay = false;
-							element.controls = false;
-							element.loop = true;
-							element.muted = true;
-							element.addEventListener('mouseover', function () {
-								element.play();
-							});
-							element.addEventListener('mouseout', function () {
-								element.pause();
-							});
-							element.addEventListener('loadedmetadata', function () {
-								element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-							});
-							element.src = '/pic?path=' + encodeURIComponent(pic.path);
-						} else {
-							element = new Image();
-							element.onload = function () {
-								element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-							};
-							element.src = '/pic?path=' + encodeURIComponent(pic.path);
-						}
-						$pic.find('.pic-content').append(element);
-						$container.append($pic);
-					});
-					$('.page').hide();
-					$('#container-pics').show();
+					renderPicsList(data.pics);
 				}
+			});
+		};
+
+		var getRandomPicsList = function (tags) {
+			var $controls = $('#header-search, #header-tags, #header-random, #header-upload, #header-edit');
+			$controls.prop('disabled', true);
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=random',
+				dataType: 'json'
+			}).fail(function () {
+				console.error('getRandomPicsList', 'fail');
+				$controls.prop('disabled', false);
+			}).done(function (data) {
+				$controls.prop('disabled', false);
+				if (data.status !== 'ok') {
+					console.error('getRandomPicsList', data.status, data.error);
+				} else {
+					renderPicsList(data.pics);
+				}
+			});
+		};
+
+		var renderPicsList = function (pics) {
+			var $container = $('#container-pics').empty().data('pics', pics);
+			pics.forEach(function (pic) {
+				var $pic = $(
+					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
+						'<div class="pic-content"></div>' +
+						'<div class="pic-toolbar">' +
+							'<input type="checkbox">' +
+						'</div>' +
+					'</div>');
+				$pic.data('pic', pic);
+
+				var ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
+					element;
+				if (['gif'].indexOf(ext.toLowerCase()) !== -1) {
+					element = document.createElement('canvas');
+					var context = element.getContext('2d'),
+						img = new Image();
+					img.onload = function () {
+						element.height = 100;
+						element.width = element.height * img.naturalWidth / img.naturalHeight;
+						context.drawImage(img, 0, 0, element.width, element.height);
+						element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
+					};
+					img.src = '/pic?path=' + encodeURIComponent(pic.path);
+				} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
+					element = document.createElement('video');
+					element.autoplay = false;
+					element.controls = false;
+					element.loop = true;
+					element.muted = true;
+					element.addEventListener('mouseover', function () {
+						element.play();
+					});
+					element.addEventListener('mouseout', function () {
+						element.pause();
+					});
+					element.addEventListener('loadedmetadata', function () {
+						element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+					});
+					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				} else {
+					element = new Image();
+					element.onload = function () {
+						element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+					};
+					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				}
+				$pic.find('.pic-content').append(element);
+				$container.append($pic);
+			});
+			$('.page').hide();
+			$('#container-pics').show();
+		};
+
+		var executeRehash = function () {
+			var $controls = $('#header-search, #header-tags, #header-random, #header-upload, #header-edit');
+			$controls.prop('disabled', true);
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=rehash',
+				dataType: 'json'
+			}).fail(function () {
+				console.error('executeRehash', 'fail');
+				$controls.prop('disabled', false);
+			}).done(function (data) {
+				$controls.prop('disabled', false);
+				if (data.status !== 'ok') {
+					console.error('executeRehash', data.status, data.error);
+				} else {
+					alert('Rehash Completed.');
+				}
+				getTagsList();
 			});
 		};
 
@@ -320,12 +372,17 @@
 			$('#container-tags').show();
 		});
 		$('#header-random').on('click', function () {
-			// TODO
-			alert('TODO');
+			getRandomPicsList();
 		});
 		$('#header-upload').on('click', function () {
 			// TODO
 			alert('TODO');
+		});
+		$('#header-rehash').on('click', function () {
+			var r = confirm('Execute reshash?');
+			if (r) {
+				executeRehash();
+			}
 		});
 		$('#header-edit').on('click', function () {
 			// TODO

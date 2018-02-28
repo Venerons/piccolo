@@ -92,6 +92,34 @@ const server = http.createServer((request, response) => {
 				}
 				response.end(JSON.stringify({ status: 'ok' }) + '\n');
 			}
+		} else if (action === 'random') {
+			// RANDOM PICS - ?action=random
+			var filesList = getFilesList(pics_path),
+				pics = [],
+				pickedPics = [];
+			const tot_pics = filesList.length;
+			for (let i = 0; i < 50 && i < tot_pics; ++i) {
+				var filepath = filesList[Math.floor(Math.random() * tot_pics)];
+				if (pickedPics.indexOf(filepath) !== -1) {
+					i--;
+				} else {
+					var picTags = path.basename(filepath, path.extname(filepath)).split(' '),
+						hash = picTags[0];
+					picTags.splice(0, 1);
+					var stats = fs.statSync(filepath);
+					pics.push({
+						hash: hash,
+						path: path.basename(filepath),
+						tags: picTags,
+						ts: stats.birthtime.getTime()
+					});
+					pickedPics.push(filepath);
+				}
+			}
+			pics.sort(function (a, b) {
+				return a.ts > b.ts ? -1 : 1;
+			});
+			response.end(JSON.stringify({ status: 'ok', pics: pics }) + '\n');
 		} else {
 			response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 		}
