@@ -18,6 +18,7 @@ const server = http.createServer((request, response) => {
 	//console.log('request.method', request.method);
 	//console.log('request.url', request.url);
 	//console.log('request.headers', request.headers);
+	console.log(request.url, '\n');
 
 	const parsed_url = new URL(`http://${hostname}:${port}${request.url}`);
 
@@ -46,29 +47,24 @@ const server = http.createServer((request, response) => {
 			// REHASH - ?action=rehash
 			var filesList = getFilesList(pics_path);
 			rehash(filesList);
+			filesList = getFilesList(pics_path);
+			remix(filesList);
 			response.end('{"status":"ok"}\n');
-		} else if (action === 'list') {
-			// LIST TAGS - ?action=list&target=tags
-			// LIST PICS - ?action=list&target=pics&tags=tag1,tag2
-			const request_target = parsed_url.searchParams.get('target');
-			if (!request_target) {
-				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
-			} else if (request_target === 'tags') {
-				var filesList = getFilesList(pics_path),
-					json = getTagsList(filesList);
-				response.end(JSON.stringify({ status: 'ok', tags: json }) + '\n');
-			} else if (request_target === 'pics') {
-				const request_tags = parsed_url.searchParams.get('tags');
-				var filesList = getFilesList(pics_path),
-					tags = [];
-				if (request_tags) {
-					tags = request_tags.split(',');
-				}
-				var json = getPicsList(filesList, tags);
-				response.end(JSON.stringify({ status: 'ok', pics: json }) + '\n');
-			} else {
-				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
+		} else if (action === 'list_tags') {
+			// LIST TAGS - ?action=list_tags
+			var filesList = getFilesList(pics_path),
+				json = getTagsList(filesList);
+			response.end(JSON.stringify({ status: 'ok', tags: json }) + '\n');
+		} else if (action === 'list_pics') {
+			// LIST PICS - ?action=list_pics&tags=tag1,tag2
+			const request_tags = parsed_url.searchParams.get('tags');
+			var filesList = getFilesList(pics_path),
+				tags = [];
+			if (request_tags) {
+				tags = request_tags.split(',');
 			}
+			var json = getPicsList(filesList, tags);
+			response.end(JSON.stringify({ status: 'ok', pics: json }) + '\n');
 		} else if (action === 'tags') {
 			// ADD TAGS - ?action=tags&pics=<pics>&add=<tags>
 			// REMOVE TAGS - ?action=tags&pics=<pics>&remove=<tags>
@@ -92,8 +88,8 @@ const server = http.createServer((request, response) => {
 				}
 				response.end(JSON.stringify({ status: 'ok' }) + '\n');
 			}
-		} else if (action === 'random') {
-			// RANDOM PICS - ?action=random
+		} else if (action === 'random_pics') {
+			// RANDOM PICS - ?action=random_pics
 			var filesList = getFilesList(pics_path),
 				pics = [],
 				pickedPics = [];
@@ -103,23 +99,10 @@ const server = http.createServer((request, response) => {
 				if (pickedPics.indexOf(filepath) !== -1) {
 					i--;
 				} else {
-					var picTags = path.basename(filepath, path.extname(filepath)).split(' '),
-						hash = picTags[0];
-					picTags.splice(0, 1);
-					var stats = fs.statSync(filepath);
-					pics.push({
-						hash: hash,
-						path: path.basename(filepath),
-						tags: picTags,
-						ts: stats.birthtime.getTime()
-					});
 					pickedPics.push(filepath);
 				}
 			}
-			pics.sort(function (a, b) {
-				return a.ts > b.ts ? -1 : 1;
-			});
-			response.end(JSON.stringify({ status: 'ok', pics: pics }) + '\n');
+			response.end(JSON.stringify({ status: 'ok', pics: getPicsList(pickedPics, []) }) + '\n');
 		} else {
 			response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 		}
@@ -166,10 +149,12 @@ const server = http.createServer((request, response) => {
 			}
 		});
 	}
+
+	console.log('---');
 });
 
 server.listen(port, hostname, () => {
-	console.log(`Server running at http://${hostname}:${port}/\nCTRL + C to shutdown`);
+	console.log(`Server running at http://${hostname}:${port}/\nCTRL + C to shutdown\n===`);
 });
 
 // MIME TYPE MAP
@@ -200,25 +185,27 @@ var getFilesList = function (tmpPath) {
 		tmpPath = path.resolve(tmpPath);
 	}
 	try {
-		fs.accessSync(tmpPath, fs.F_OK);
+		fs.accessSync(tmpPath, fs.constants.F_OK);
 		var stats = fs.statSync(tmpPath);
 		if (stats.isDirectory()) {
 			var array = fs.readdirSync(tmpPath);
 			array.forEach(function (filename) {
-				if (filename.indexOf('.') === 0 || filename === 'map.json') {
+				if (filename.charAt(0) === '.') {
 					return;
 				}
 				try {
 					var stats = fs.statSync(tmpPath + path.sep + filename);
 					if (stats.isFile()) {
-						fs.accessSync(tmpPath + path.sep + filename, fs.R_OK | fs.W_OK);
+						fs.accessSync(tmpPath + path.sep + filename, fs.constants.R_OK | fs.constants.W_OK);
 						filesList.push(tmpPath + path.sep + filename);
+					} else if (stats.isDirectory()) {
+						filesList = filesList.concat(getFilesList(tmpPath + path.sep + filename));
 					}
 				} catch (e) {}
 			});
 		} else if (stats.isFile()) {
 			try {
-				fs.accessSync(tmpPath, fs.R_OK | fs.W_OK);
+				fs.accessSync(tmpPath, fs.constants.R_OK | fs.constants.W_OK);
 				filesList.push(tmpPath);
 			} catch (e) {}
 		}
@@ -246,13 +233,36 @@ var tagsSorting = function (a, b) {
 	}
 };
 
+// REMIX
+
+var remix = function (filesList) {
+	console.log('Remixing...');
+	var timestamp = Date.now();
+	filesList.forEach(function (filepath) {
+		var ext = path.extname(filepath).substring(1).toLowerCase(),
+			basename = path.basename(filepath),
+			mixed_path = pics_path + path.sep + ext + path.sep + basename;
+		if (filepath !== mixed_path) {
+			try {
+				fs.accessSync(pics_path + path.sep + ext, fs.constants.F_OK);
+			} catch (e) {
+				fs.mkdirSync(pics_path + path.sep + ext, { recursive: true });
+			}
+			fs.renameSync(filepath, mixed_path);
+		}
+	});
+	console.log('\tRemixing completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
+	console.log('Remixing DONE');
+};
+
 // REHASH
 
 var rehash = function (filesList) {
-	console.log('Searching duplicates...');
+	console.log('Rehashing...');
+	console.log('\tSearching duplicates...');
 	var timestamp = Date.now();
 	var hashMap = Object.create(null);
-	filesList.forEach(function (filepath, index) {
+	filesList.forEach(function (filepath) {
 		var digest = crypto.createHash('md5').update(fs.readFileSync(filepath)).digest('hex'); // .substring(0, 6);
 		if (hashMap[digest]) {
 			hashMap[digest].push(filepath);
@@ -260,8 +270,8 @@ var rehash = function (filesList) {
 			hashMap[digest] = [filepath];
 		}
 	});
-	console.log('Duplicates search completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
-	console.log('Rehashing files...');
+	console.log('\tDuplicates search completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
+	console.log('\tRehashing files...');
 	timestamp = Date.now();
 	var rehashCount = 0,
 		duplicateCount = 0;
@@ -282,27 +292,28 @@ var rehash = function (filesList) {
 			if (index === 0) {
 				var newFileName = digest + (array.length !== 0 ? ' ' + array.join(' ') : '');
 				if (newFileName.length + path.extname(filepath).length > 255) {
-					console.log('Name "' + newFileName + '" too long, reduced to "' + digest + '"');
+					console.log('\tName "' + newFileName + '" too long, reduced to "' + digest + '"');
 					newFileName = digest;
 				}
 				if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-					fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
+					fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath).toLowerCase());
 				}
 				rehashCount++;
 			} else {
 				try {
 					fs.unlinkSync(filepath);
-					console.log('Removed duplicate file ' + path.basename(filepath));
+					console.log('\tRemoved duplicate file ' + path.basename(filepath));
 					duplicateCount++;
 				} catch (e) {
-					console.error('Error: An error occurred removing duplicate file ' + filepath);
+					console.error('\tError: An error occurred removing duplicate file ' + filepath);
 				}
 			}
 		});
 	});
-	console.log('Rehashing completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
-	console.log(rehashCount + ' files has been rehashed.');
-	console.log(duplicateCount + ' duplicated files has been removed.');
+	console.log('\t' + rehashCount + ' files has been rehashed.');
+	console.log('\t' + duplicateCount + ' duplicated files has been removed.');
+	console.log('\tRehashing completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
+	console.log('Rehashing DONE');
 };
 
 // GET TAGS LIST
@@ -354,8 +365,8 @@ var getPicsList = function (filesList, tags) {
 		if (match) {
 			var stats = fs.statSync(filepath);
 			pics.push({
-				hash: hash,
-				path: path.basename(filepath),
+				path: filepath.replace(pics_path, ''), //path.basename(filepath),
+				ext: path.extname(filepath).toLowerCase().replace('.', ''),
 				tags: picTags,
 				ts: stats.birthtime.getTime()
 			});
@@ -371,7 +382,8 @@ var getPicsList = function (filesList, tags) {
 // ADD TAGS
 
 var addTags = function (filesList, tags) {
-	console.log('Adding tags', tags);
+	console.log('addTags...');
+	console.log('\tAdding tags', tags);
 	filesList.forEach(function (filepath, index) {
 		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 		tags.forEach(function (tag) {
@@ -385,13 +397,14 @@ var addTags = function (filesList, tags) {
 			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
 		}
 	});
-	console.log('Tags added.');
+	console.log('addTags DONE');
 };
 
 // REMOVE TAGS
 
 var removeTags = function (filesList, tags) {
-	console.log('Removing tags', tags);
+	console.log('removeTags...');
+	console.log('\tRemoving tags', tags);
 	filesList.forEach(function (filepath, index) {
 		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 		for (var i = 0; i < fileTags.length; ++i) {
@@ -406,5 +419,5 @@ var removeTags = function (filesList, tags) {
 			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
 		}
 	});
-	console.log('Tags removed.');
+	console.log('removeTags DONE');
 };
