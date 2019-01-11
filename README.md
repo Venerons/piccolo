@@ -1,6 +1,6 @@
 # Piccolo
 
-_Copyright (c) 2016-2017 Daniele Veneroni._  
+_Copyright (c) 2016-2019 Daniele Veneroni._  
 _Released under GPLv3 License. See [LICENSE.md](LICENSE.md) for further information._
 
 Piccolo is a suite of tools to organize pictures and videos. It's built on HTML5 and Node.js.
@@ -8,7 +8,7 @@ Piccolo is a suite of tools to organize pictures and videos. It's built on HTML5
 ## Licensing
 
 Piccolo  
-Copyright (c) 2016-2017 Daniele Veneroni  
+Copyright (c) 2016-2019 Daniele Veneroni  
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.  
 
