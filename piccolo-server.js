@@ -6,7 +6,7 @@ const path = require('path');
 
 const hostname = '127.0.0.1';
 const port = process.argv[3] ? parseInt(process.argv[3], 10) : 3000;
-const pics_path = process.argv[2]
+const pics_path = process.argv[2];
 
 // node piccolo-server.js <pics_path> <port>
 // Examples:
@@ -71,21 +71,34 @@ const server = http.createServer((request, response) => {
 			const request_pics = parsed_url.searchParams.get('pics');
 			const request_add = parsed_url.searchParams.get('add');
 			const request_remove = parsed_url.searchParams.get('remove');
-			if (!request_pics || !request_add || !request_remove) {
+			if (!(request_pics && request_add || request_pics && request_remove)) {
 				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
 			} else {
 				var filesList = [];
 				JSON.parse(request_pics).forEach(function (item) {
-					filesList.push(pics_path + path.sep + item);
+					filesList.push(path.normalize(pics_path + path.sep + item));
 				});
 				var add = JSON.parse(request_add),
 					remove = JSON.parse(request_remove);
-				if (add.length > 0) {
+				if (add && add.length > 0) {
 					addTags(filesList, add);
 				}
-				if (remove.length > 0) {
+				if (remove && remove.length > 0) {
 					removeTags(filesList, remove);
 				}
+				response.end(JSON.stringify({ status: 'ok' }) + '\n');
+			}
+		} else if (action === 'delete_pics') {
+			// DELETE PICS - ?action=delete_pics&pics=<pics>
+			const request_pics = parsed_url.searchParams.get('pics');
+			if (!request_pics) {
+				response.end('{"status":"error","error":"INVALID_REQUEST"}\n');
+			} else {
+				var filesList = [];
+				JSON.parse(request_pics).forEach(function (item) {
+					filesList.push(path.normalize(pics_path + path.sep + item));
+				});
+				deletePics(filesList);
 				response.end(JSON.stringify({ status: 'ok' }) + '\n');
 			}
 		} else if (action === 'random_pics') {
@@ -114,8 +127,8 @@ const server = http.createServer((request, response) => {
 		} else {
 			var ext = path.extname(request_path),
 				mime = mimeTypeMap.extensions[ext];
-			console.log('/pic', pics_path + path.sep + request_path);
-			fs.readFile(pics_path + path.sep + request_path, 'binary', function (error, file) {
+			console.log('/pic', path.normalize(pics_path + path.sep + request_path));
+			fs.readFile(path.normalize(pics_path + path.sep + request_path), 'binary', function (error, file) {
 				if (error) {
 					returnHTTPError(response, 404, 'Not Found');
 				} else {
@@ -194,12 +207,13 @@ var getFilesList = function (tmpPath) {
 					return;
 				}
 				try {
-					var stats = fs.statSync(tmpPath + path.sep + filename);
+					var f = path.normalize(tmpPath + path.sep + filename),
+						stats = fs.statSync(f);
 					if (stats.isFile()) {
-						fs.accessSync(tmpPath + path.sep + filename, fs.constants.R_OK | fs.constants.W_OK);
-						filesList.push(tmpPath + path.sep + filename);
+						fs.accessSync(f, fs.constants.R_OK | fs.constants.W_OK);
+						filesList.push(f);
 					} else if (stats.isDirectory()) {
-						filesList = filesList.concat(getFilesList(tmpPath + path.sep + filename));
+						filesList = filesList.concat(getFilesList(f));
 					}
 				} catch (e) {}
 			});
@@ -244,11 +258,11 @@ var remix = function (filesList) {
 			mixed_path = pics_path + path.sep + ext + path.sep + basename;
 		if (filepath !== mixed_path) {
 			try {
-				fs.accessSync(pics_path + path.sep + ext, fs.constants.F_OK);
+				fs.accessSync(path.normalize(pics_path + path.sep + ext), fs.constants.F_OK);
 			} catch (e) {
-				fs.mkdirSync(pics_path + path.sep + ext, { recursive: true });
+				fs.mkdirSync(path.normalize(pics_path + path.sep + ext), { recursive: true });
 			}
-			fs.renameSync(filepath, mixed_path);
+			fs.renameSync(path.normalize(filepath), path.normalize(mixed_path));
 		}
 	});
 	console.log('\tRemixing completed in ' + ((Date.now() - timestamp) / 1000) + ' seconds.');
@@ -296,7 +310,7 @@ var rehash = function (filesList) {
 					newFileName = digest;
 				}
 				if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-					fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath).toLowerCase());
+					fs.renameSync(path.normalize(filepath), path.normalize(path.dirname(filepath) + path.sep + newFileName + path.extname(filepath).toLowerCase()));
 				}
 				rehashCount++;
 			} else {
@@ -384,7 +398,7 @@ var getPicsList = function (filesList, tags) {
 var addTags = function (filesList, tags) {
 	console.log('addTags...');
 	console.log('\tAdding tags', tags);
-	filesList.forEach(function (filepath, index) {
+	filesList.forEach(function (filepath) {
 		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 		tags.forEach(function (tag) {
 			if (fileTags.indexOf(tag) === -1) {
@@ -394,7 +408,11 @@ var addTags = function (filesList, tags) {
 		fileTags.sort(tagsSorting);
 		var newFileName = fileTags.join(' ');
 		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
+			try {
+				fs.renameSync(path.normalize(filepath), path.normalize(path.dirname(filepath) + path.sep + newFileName + path.extname(filepath)));
+			} catch (e) {
+				console.error('\tError renaming files', e);
+			}
 		}
 	});
 	console.log('addTags DONE');
@@ -405,7 +423,7 @@ var addTags = function (filesList, tags) {
 var removeTags = function (filesList, tags) {
 	console.log('removeTags...');
 	console.log('\tRemoving tags', tags);
-	filesList.forEach(function (filepath, index) {
+	filesList.forEach(function (filepath) {
 		var fileTags = path.basename(filepath, path.extname(filepath)).split(' ');
 		for (var i = 0; i < fileTags.length; ++i) {
 			if (tags.indexOf(fileTags[i]) !== -1) {
@@ -416,8 +434,26 @@ var removeTags = function (filesList, tags) {
 		fileTags.sort(tagsSorting);
 		var newFileName = fileTags.join(' ');
 		if (newFileName !== path.basename(filepath, path.extname(filepath))) {
-			fs.renameSync(filepath, path.dirname(filepath) + path.sep + newFileName + path.extname(filepath));
+			try {
+				fs.renameSync(path.normalize(filepath), path.normalize(path.dirname(filepath) + path.sep + newFileName + path.extname(filepath)));
+			} catch (e) {
+				console.error('\tError renaming files', e);
+			}
 		}
 	});
 	console.log('removeTags DONE');
+};
+
+// DELETE PICS
+
+var deletePics = function (filesList) {
+	console.log('deletePics...');
+	filesList.forEach(function (filepath) {
+		try {
+			fs.unlinkSync(filepath);
+		} catch (e) {
+			console.error('\tError unlinking file', e);
+		}
+	});
+	console.log('deletePics DONE');
 };
