@@ -44,7 +44,7 @@
 		input[type=checkbox] {
 			cursor: pointer;
 		}
-		button {
+		.button {
 			min-width: 57px;
 			min-height: 3rem;
 			margin: 0.5rem;
@@ -56,14 +56,17 @@
 			border: none;
 			border-radius: 4px;
 		}
-		button:hover,
-		button:focus {
+		.button:hover,
+		.button:focus {
 			color: whitesmoke;
 			background: dodgerblue;
 		}
-		button:active {
+		.button:active {
 			color: dodgerblue;
 			background: whitesmoke;
+		}
+		.button.button-active {
+			border: 2px solid dodgerblue;
 		}
 		a {
 			color: dodgerblue;
@@ -120,6 +123,9 @@
 				height: 100px;
 			}
 		}
+		.pic.pic-selected {
+			border: 2px solid dodgerblue;
+		}
 		.pic-content > img,
 		.pic-content > canvas,
 		.pic-content > video {
@@ -136,6 +142,11 @@
 			left: 0;
 			width: 100%;
 			background: rgba(0, 0, 0, 0.5);
+			display: flex;
+			flex-flow: row nowrap;
+			align-content: flex-start;
+			align-items: center;
+			justify-content: center;
 		}
 		.preview {
 			position: fixed;
@@ -174,6 +185,82 @@
 			max-width: 100%;
 			max-height: 100%;
 		}
+		.dialog {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 500px;
+			min-width: 280px;
+			max-width: 95%;
+			height: auto;
+			max-height: 95%;
+			display: flex;
+			flex-flow: column nowrap;
+			justify-content: flex-start;
+			align-items: stretch;
+			align-content: stretch;
+
+			border: none;
+			border-top: 1px solid rgba(255, 255, 255, 0.2);
+			box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+			border-radius: 10px;
+			color: whitesmoke;
+			background: #333;
+		}
+		.dialog::backdrop {
+			background: rgba(0, 0, 0, 0.4);
+		}
+		.dialog + .backdrop {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.4);
+		}
+		.dialog h3 {
+			padding: 1rem;
+			text-overflow: ellipsis;
+			font-size: 1.2rem;
+			text-align: center;
+			color: whitesmoke;
+		}
+		.dialog .dialog-content {
+			padding: 0 1rem 1.5rem;
+			overflow: auto;
+			font-size: 1rem;
+		}
+		.dialog .dialog-buttonbar {
+			min-height: 3rem;
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: stretch;
+			align-content: stretch;
+		}
+		.dialog .dialog-buttonbar > .button {
+			box-shadow: none;
+			flex: 1;
+			border-top: 1px solid dodgerblue;
+			margin: 0;
+		}
+		.dialog .dialog-buttonbar > .button:first-of-type:last-of-type {
+			border-radius: 0 0 10px 10px;
+		}
+		.dialog .dialog-buttonbar > .button:first-of-type:not(:last-of-type) {
+			border-right: 1px solid dodgerblue;
+			border-radius: 0 0 0 10px;
+		}
+		.dialog .dialog-buttonbar > .button:not(:first-of-type):not(:last-of-type) {
+			border-right: 1px solid dodgerblue;
+			border-left: 1px solid dodgerblue;
+			border-radius: 0;
+		}
+		.dialog .dialog-buttonbar > .button:not(:first-of-type):last-of-type {
+			border-left: 1px solid dodgerblue;
+			border-radius: 0 0 10px 0;
+		}
 	</style>
 </head>
 <body>
@@ -182,17 +269,23 @@
 	<header class="header">
 		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
 		<div class="header-buttons">
-			<button id="header-tags" title="Tags"><i class="icon-tags"></i></button>
-			<button id="header-random" title="Random"><i class="icon-random"></i></button>
-			<button id="header-upload" title="Upload"><i class="icon-upload"></i></button>
-			<button id="header-rehash" title="Rehash"><i class="icon-refresh"></i></button>
-			<button id="header-edit" title="Edit"><i class="icon-edit"></i></button>
+			<button id="header-tags" title="Tags" class="button"><i class="icon-tags"></i></button>
+			<button id="header-random" title="Random" class="button"><i class="icon-random"></i></button>
+			<button id="header-upload" title="Upload" class="button"><i class="icon-upload"></i></button>
+			<button id="header-rehash" title="Rehash" class="button"><i class="icon-refresh"></i></button>
+			<button id="header-edit" title="Edit" class="button"><i class="icon-edit"></i></button>
 		</div>		
 	</header>
 
+	<div class="edit-toolbar" style="display: none">
+		<button id="edit-add" title="Tags" class="button"><i class="icon-tags"></i> Add</button>
+		<button id="edit-remove" title="Random" class="button"><i class="icon-tags"></i> Remove</button>
+		<button id="edit-delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
+	</div>
+
 	<div id="container-tags" class="page" style="display: none">
 		<div class="flex-row">
-			<button id="tags-random" title="Random" disabled><i class="icon-random"></i></button>
+			<button id="tags-random" title="Random" disabled class="button"><i class="icon-random"></i></button>
 		</div>
 		<ul id="tags-list"></ul>
 	</div>
@@ -201,9 +294,9 @@
 
 	<div id="preview" class="preview" style="display: none">
 		<div class="preview-toolbar">
-			<button id="preview-toolbar-back" title="Back"><i class="icon-back"></i></button>
+			<button id="preview-toolbar-back" title="Back" class="button"><i class="icon-left"></i></button>
 			<div style="flex: 1"></div>
-			<button id="preview-toolbar-edit" title="Edit" disabled><i class="icon-edit"></i></button>
+			<button id="preview-toolbar-edit" title="Edit" disabled class="button"><i class="icon-edit"></i></button>
 		</div>
 		<div class="preview-container">
 			<img src="#">
@@ -211,7 +304,63 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+	<script src="dialog-polyfill.js"></script>
 	<script type="text/javascript">
+
+		var openDialog = function (settings) {
+			var dialogID = 'dialog-' + Date.now();
+			var $dialog = $(
+				'<dialog id="' + dialogID + '" class="dialog">' +
+					(settings.title ? '<h3></h3>' : '') +
+					(settings.content ? '<div class="dialog-content"></div>' : '') +
+					'<div class="dialog-buttonbar"></div>' +
+				'</dialog>');
+			if (settings.width) {
+				$dialog.width(settings.width);
+			}
+			if (settings.height) {
+				$dialog.height(settings.height);
+				$dialog.find('.dialog-content').css({ flex: 1 });
+			}
+			if (settings.title) {
+				$dialog.find('h3').text(settings.title);
+			}
+			if (settings.content) {
+				$dialog.find('.dialog-content').append(settings.content);
+			}
+			if (settings.buttons) {
+				if (settings.buttons.length === 0) {
+					$dialog.find('.dialog-content').css({ 'border-bottom': 'none' });
+					$dialog.find('.dialog-buttonbar').remove();
+				} else {
+					settings.buttons.forEach(function (button, index) {
+						var $button = $('<button class="button">' + button.label + '</button>');
+						if (button.onclick) {
+							$button.on('click', function (e) {
+								button.onclick.call($dialog[0], e);
+							});
+						}
+						$dialog.find('.dialog-buttonbar').append($button);
+					});
+				}
+			} else {
+				var $button = $('<button autofocus class="button">' + _('close') + '</button>');
+				$button.on('click', function (e) {
+					$dialog[0].close();
+					$dialog.remove();
+				});
+				$dialog.find('.dialog-buttonbar').append($button);
+			}
+			$('body').append($dialog);
+			var dialog = document.getElementById(dialogID);
+			dialogPolyfill.registerDialog(dialog);
+			dialog.addEventListener('close', function () {
+				$dialog.remove();
+			});
+			dialog.showModal();
+			return dialog;
+		};
+
 		var getTagsList = function () {
 			var $controls = $('#header-search, #header-tags, #header-random, #header-upload, #header-edit');
 			$controls.prop('disabled', true);
@@ -286,11 +435,11 @@
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
 						'<div class="pic-content"></div>' +
 						'<div class="pic-toolbar">' +
-							'<input type="checkbox">' +
+							'<span style="flex: 1"></span>' +
+							'<span style="color: rgba(255, 255, 255, 0.5); margin: 0 0.5rem; font-size: 0.8rem">' + pic.ext + '</span>' +
 						'</div>' +
 					'</div>');
 				$pic.data('pic', pic);
-
 				var element;
 				if (['gif'].indexOf(pic.ext) !== -1) {
 					element = document.createElement('canvas');
@@ -354,6 +503,57 @@
 			});
 		};
 
+		var addTags = function (pics, tags) {
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=tags&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&add=' + encodeURIComponent(JSON.stringify(tags)),
+				dataType: 'json'
+			}).fail(function () {
+				console.error('addTags', 'fail');
+			}).done(function (data) {
+				if (data.status !== 'ok') {
+					console.error('addTags', data.status, data.error);
+				} else {
+					alert('Tags Added.');
+				}
+				getTagsList();
+			});
+		};
+
+		var removeTags = function (pics, tags) {
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=tags&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&remove=' + encodeURIComponent(JSON.stringify(tags)),
+				dataType: 'json'
+			}).fail(function () {
+				console.error('removeTags', 'fail');
+			}).done(function (data) {
+				if (data.status !== 'ok') {
+					console.error('removeTags', data.status, data.error);
+				} else {
+					alert('Tags Removed.');
+				}
+				getTagsList();
+			});
+		};
+
+		var deletePics = function (pics) {
+			$.ajax({
+				type: 'GET',
+				url: '/api?action=delete_pics&pics=' + encodeURIComponent(JSON.stringify(pics)),
+				dataType: 'json'
+			}).fail(function () {
+				console.error('deletePics', 'fail');
+			}).done(function (data) {
+				if (data.status !== 'ok') {
+					console.error('deletePics', data.status, data.error);
+				} else {
+					alert('Pics Deleted.');
+				}
+				getTagsList();
+			});
+		};
+
 		$('#header-search').on('change', function () {
 			var pattern = $(this).val().trim();
 			if (pattern === '') {
@@ -384,8 +584,122 @@
 			}
 		});
 		$('#header-edit').on('click', function () {
-			// TODO
-			alert('TODO');
+			var $this = $(this),
+				$toolbar = $('.edit-toolbar');
+			if ($this.hasClass('button-active')) {
+				$this.removeClass('button-active');
+				$toolbar.hide();
+				$('.pic-selected').removeClass('pic-selected');
+				delete window.EDIT_MODE;
+			} else {
+				$this.addClass('button-active');
+				$toolbar.show();
+				window.EDIT_MODE = true;
+			}
+		});
+
+		$('#edit-add').on('click', function () {
+			openDialog({
+				title: 'Add Tags',
+				content: '<input type="text" placeholder="Tag_1,Tag_2">',
+				buttons: [
+					{
+						label: 'Cancel',
+						onclick: function () {
+							this.close();
+						}
+					},
+					{
+						label: 'Add',
+						onclick: function () {
+							var pics = [];
+							$('.pic-selected').each(function () {
+								var $pic = $(this),
+									pic = $pic.data('pic');
+								if (pic) {
+									pics.push(pic.path);
+									$pic.remove();
+								}
+							});
+							if (pics.length === 0) {
+								return;
+							}
+							var tags = $(this).find('input').val().split(',');
+							addTags(pics, tags);
+							this.close();
+						}
+					}
+				]
+			});
+		});
+
+		$('#edit-remove').on('click', function () {
+			openDialog({
+				title: 'Remove Tags',
+				content: '<input type="text" placeholder="Tag_1,Tag_2">',
+				buttons: [
+					{
+						label: 'Cancel',
+						onclick: function () {
+							this.close();
+						}
+					},
+					{
+						label: 'Remove',
+						onclick: function () {
+							var pics = [];
+							$('.pic-selected').each(function () {
+								var $pic = $(this),
+									pic = $pic.data('pic');
+								if (pic) {
+									pics.push(pic.path);
+									$pic.remove();
+								}
+							});
+							if (pics.length === 0) {
+								return;
+							}
+							var tags = $(this).find('input').val().split(',');
+							removeTags(pics, tags);
+							this.close();
+						}
+					}
+				]
+			});
+		});
+
+		$('#edit-delete').on('click', function () {
+			openDialog({
+				title: 'Delete Pics',
+				content: 'Are you sure?',
+				buttons: [
+					{
+						label: 'Cancel',
+						onclick: function () {
+							this.close();
+						}
+					},
+					{
+						label: 'Delete',
+						onclick: function () {
+							var pics = [];
+							$('.pic-selected').each(function () {
+								var $pic = $(this),
+									pic = $pic.data('pic');
+								if (pic) {
+									pics.push(pic.path);
+									$pic.remove();
+								}
+							});
+							if (pics.length === 0) {
+								return;
+							}
+							deletePics(pics);
+							this.close();
+						}
+					}
+				]
+			});
 		});
 
 		$('#tags-list').on('click', 'li', function () {
@@ -393,30 +707,33 @@
 			$('#header-search').val(tag).trigger('change');
 		});
 
-		$('#container-pics').on('click', '.pic-content', function () {
-			var pic = $(this).parent().data('pic');
-			$('#preview').show();
-
-			var ext = pic.path.substring(pic.path.lastIndexOf('.') + 1),
-				element;
-			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(ext.toLowerCase()) !== -1) {
-				element = document.createElement('video');
-				element.autoplay = true;
-				element.controls = true;
-				element.loop = true;
-				element.muted = false;
-				element.addEventListener('loadedmetadata', function () {
-					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-					$('.preview-container').empty().append(element);
-				});
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+		$('#container-pics').on('click', '.pic', function () {
+			var $pic = $(this);
+			if (window.EDIT_MODE) {
+				$pic.toggleClass('pic-selected');
 			} else {
-				element = new Image();
-				element.onload = function () {
-					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-					$('.preview-container').empty().append(element);
-				};
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				var pic = $(this).data('pic');
+				$('#preview').show();
+				var element;
+				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
+					element = document.createElement('video');
+					element.autoplay = true;
+					element.controls = true;
+					element.loop = true;
+					element.muted = false;
+					element.addEventListener('loadedmetadata', function () {
+						element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+						$('.preview-container').empty().append(element);
+					});
+					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				} else {
+					element = new Image();
+					element.onload = function () {
+						element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+						$('.preview-container').empty().append(element);
+					};
+					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				}
 			}
 		});
 
@@ -427,181 +744,5 @@
 
 		getTagsList();
 	</script>
-
-	<!--
-	https://github.com/GoogleChrome/dialog-polyfill
-
-	XWEB.dialog = function (settings) {
-		var dialogID = 'dialog-' + Date.now();
-		var $dialog = $(
-			'<dialog id="' + dialogID + '" class="dialog">' +
-				(exists(settings.title) ? '<h3></h3>' : '') +
-				(exists(settings.content) ? '<div class="dialog-content"></div>' : '') +
-				'<div class="dialog-buttonbar"></div>' +
-			'</dialog>');
-		if (exists(settings.width)) {
-			$dialog.width(settings.width);
-		}
-		if (exists(settings.height)) {
-			$dialog.height(settings.height);
-			$dialog.find('.dialog-content').css({ flex: 1 });
-		}
-		if (exists(settings.title)) {
-			$dialog.find('h3').text(settings.title);
-		}
-		if (exists(settings.content)) {
-			$dialog.find('.dialog-content').append(settings.content);
-		}
-		if (exists(settings.buttons)) {
-			if (settings.buttons.length === 0) {
-				$dialog.find('.dialog-content').css({ 'border-bottom': 'none' });
-				$dialog.find('.dialog-buttonbar').remove();
-			} else {
-				settings.buttons.forEach(function (button, index) {
-					var $button = $('<button class="button button-inverted">' + button.label + '</button>');
-					if (exists(button.onclick)) {
-						$button.on('click', function (e) {
-							button.onclick.call($dialog[0], e);
-						});
-					}
-					$dialog.find('.dialog-buttonbar').append($button);
-				});
-			}
-		} else {
-			var $button = $('<button class="button button-inverted" autofocus>' + _('close') + '</button>');
-			$button.on('click', function (e) {
-				$dialog[0].close();
-				$dialog.remove();
-			});
-			$dialog.find('.dialog-buttonbar').append($button);
-		}
-		$('body').append($dialog);
-		var dialog = document.getElementById(dialogID);
-		dialogPolyfill.registerDialog(dialog);
-		dialog.addEventListener('close', function () {
-			$dialog.remove();
-		});
-		dialog.showModal();
-		return dialog;
-	};
-
-	.dialog {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 500px;
-		min-width: 280px;
-		max-width: 95%;
-		height: auto;
-		max-height: 95%;
-		display: flex;
-		flex-flow: column nowrap;
-		justify-content: flex-start;
-		align-items: stretch;
-		align-content: stretch;
-
-		border: none;
-		border-top: 1px solid mix($theme-color-background, white, 90%);
-		box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
-		border-radius: 10px;
-		color: $theme-color-text;
-		background: $theme-color-background;
-
-		&::backdrop {
-			background: rgba(0, 0, 0, 0.4);
-		}
-		& + .backdrop {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background: rgba(0, 0, 0, 0.4);
-		}
-
-		h3 {
-			padding: 1rem;
-			text-overflow: ellipsis;
-			font-size: 1.2rem;
-			text-align: center;
-			color: $theme-color-main-1;
-		}
-		.dialog-content {
-			padding: 0 1rem 1.5rem;
-			overflow: auto;
-			font-size: 1rem;
-			border-bottom: 1px solid mix($theme-color-background, black, 90%);
-		}
-		.dialog-content-loader {
-			padding: 2.5rem;
-			font-size: 1rem;
-			text-align: center;
-		}
-		.dialog-buttonbar {
-			min-height: 3rem;
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: flex-start;
-			align-items: stretch;
-			align-content: stretch;
-
-			> .button {
-				box-shadow: none;
-				flex: 1;
-				border-top: 1px solid mix($theme-color-background, white, 90%);
-
-				&:first-of-type:last-of-type {
-					border-radius: 0 0 10px 10px;
-				}
-				&:first-of-type:not(:last-of-type) {
-					border-right: 1px solid mix($theme-color-background, black, 90%);
-					border-radius: 0 0 0 10px;
-				}
-				&:not(:first-of-type):not(:last-of-type) {
-					border-right: 1px solid mix($theme-color-background, black, 90%);
-					border-left: 1px solid mix($theme-color-background, white, 90%);
-					border-radius: 0;
-				}
-				&:not(:first-of-type):last-of-type {
-					border-left: 1px solid mix($theme-color-background, white, 90%);
-					border-radius: 0 0 10px 0;
-				}
-			}
-		}
-
-		&.dialog-inverted {
-			color: $theme-color-background;
-			background: $theme-color-main-1;
-			border-top: 1px solid mix($theme-color-main-1, white, 90%);
-
-			h3 {
-				color: inherit;
-			}
-			.dialog-content {
-				border-bottom: 1px solid mix($theme-color-main-1, black, 90%);
-			}
-			.dialog-content-loader {
-				border-bottom: 1px solid mix($theme-color-main-1, black, 90%);
-			}
-			.dialog-buttonbar {
-				> button {
-					border-top: 1px solid mix($theme-color-main-1, white, 90%);
-
-					&:first-of-type:not(:last-of-type) {
-						border-right: 1px solid mix($theme-color-main-1, black, 90%);
-					}
-					&:not(:first-of-type):not(:last-of-type) {
-						border-right: 1px solid mix($theme-color-main-1, black, 90%);
-						border-left: 1px solid mix($theme-color-main-1, white, 90%);
-					}
-					&:not(:first-of-type):last-of-type {
-						border-left: 1px solid mix($theme-color-main-1, white, 90%);
-					}
-				}
-			}
-		}
-	}
-	-->
 </body>
 </html>
