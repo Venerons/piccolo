@@ -337,8 +337,10 @@ var getTagsList = function (filesList) {
 	var labels = [],
 		count = [];
 	filesList.forEach(function (filepath, index) {
-		var picTags = path.basename(filepath, path.extname(filepath)).split(' ');
+		var picTags = path.basename(filepath, path.extname(filepath)).split(' '),
+			ext = path.extname(filepath).toLowerCase().replace('.', '');
 		picTags.splice(0, 1);
+		picTags.push(ext);
 		picTags.forEach(function (tag) {
 			var index = labels.indexOf(tag);
 			if (index === -1) {
@@ -370,8 +372,10 @@ var getPicsList = function (filesList, tags) {
 	var pics = [];
 	filesList.forEach(function (filepath, index) {
 		var picTags = path.basename(filepath, path.extname(filepath)).split(' '),
+			ext = path.extname(filepath).toLowerCase().replace('.', ''),
 			hash = picTags[0];
 		picTags.splice(0, 1);
+		picTags.push(ext);
 		var match = true;
 		tags.forEach(function (tag) {
 			match = match && picTags.includes(tag);

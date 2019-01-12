@@ -291,7 +291,13 @@
 
 	<div id="container-tags" class="page" style="display: none">
 		<div class="flex-row">
-			<button id="tags-random" title="Random" disabled class="button"><i class="icon-random"></i></button>
+			<span>Sorting</span>
+			<select id="tags-sorting" style="margin: 1rem">
+				<option value="alpha">Alphabetic Ascendant</option>
+				<option value="alpha-desc">Alphabetic Descendant</option>
+				<option value="count">Count Ascendant</option>
+				<option value="count-desc">Count Descendant</option>
+			</select>
 		</div>
 		<ul id="tags-list"></ul>
 	</div>
@@ -301,6 +307,8 @@
 	<div id="preview" class="preview" style="display: none">
 		<div class="preview-toolbar">
 			<button id="preview-toolbar-back" title="Back" class="button"><i class="icon-left"></i></button>
+			<button id="preview-toolbar-star" title="Star" class="button"><i class="icon-star"></i></button>
+			<button id="preview-toolbar-delete" title="Delete" class="button"><i class="icon-delete"></i></button>
 			<div style="flex: 1"></div>
 			<button id="preview-toolbar-edit" title="Edit" disabled class="button"><i class="icon-edit"></i></button>
 		</div>
@@ -399,15 +407,42 @@
 					console.error('getTagsList', data.status, data.error);
 					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					var $datalist = $('#datalist-tags').empty().data('tags', data.tags),
-						$list = $('#tags-list').empty();
+					var $datalist = $('#datalist-tags').empty().data('tags', data.tags);
 					data.tags.forEach(function (tag) {
 						$datalist.append('<option value="' + tag.label + '"></option>');
-						var $li = $('<li><a>' + tag.label + ' (' + tag.count + ')</a></li>');
-						$li.data('tag', tag.label);
-						$list.append($li);
 					});
+					renderTagsList();
 				}
+			});
+		};
+
+		var renderTagsList = function (mode) {
+			var tags = $('#datalist-tags').data('tags');
+			if (!mode) {
+				mode = $('#tags-sorting').val();
+			}
+			if (mode === 'alpha') {
+				tags.sort(function (a, b) {
+					return a.label < b.label ? -1 : 1;
+				});
+			} else if (mode === 'alpha-desc') {
+				tags.sort(function (a, b) {
+					return a.label > b.label ? -1 : 1;
+				});
+			} else if (mode === 'count') {
+				tags.sort(function (a, b) {
+					return a.count < b.count ? -1 : 1;
+				});
+			} else if (mode === 'count-desc') {
+				tags.sort(function (a, b) {
+					return a.count > b.count ? -1 : 1;
+				});
+			}
+			var $list = $('#tags-list').empty();
+			tags.forEach(function (tag) {
+				var $li = $('<li><a>' + tag.label + ' (' + tag.count + ')</a></li>');
+				$li.data('tag', tag.label);
+				$list.append($li);
 			});
 		};
 
@@ -461,6 +496,7 @@
 				var $pic = $(
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
 						'<div class="pic-content"></div>' +
+						(pic.tags.indexOf('piccolostar') !== -1 ? '<i class="icon-tags" style="position: absolute; top: 0; left: 0; color: gold"></i>' : '') +
 						/*
 						'<div class="pic-toolbar">' +
 							'<span style="flex: 1"></span>' +
@@ -748,6 +784,11 @@
 			});
 		});
 
+		$('#tags-sorting').on('click', function () {
+			var sorting = $(this).val();
+			renderTagsList(sorting);
+		});
+
 		$('#tags-list').on('click', 'li', function () {
 			var tag = $(this).data('tag');
 			$('#header-search').val(tag).trigger('change');
@@ -759,7 +800,7 @@
 				$pic.toggleClass('pic-selected');
 			} else {
 				var pic = $(this).data('pic');
-				$('#preview').show();
+				$('#preview').data('pic', pic).show();
 				var element;
 				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
 					element = document.createElement('video');
@@ -786,6 +827,40 @@
 		$('#preview-toolbar-back').on('click', function () {
 			$('.preview-container').empty();
 			$('#preview').hide();
+		});
+
+		$('#preview-toolbar-star').on('click', function () {
+			var pic = $('#preview').data('pic');
+			if (pic.tags.indexOf('piccolostar') === -1) {
+				addTags([pic.path], ['piccolostar']);
+			} else {
+				removeTags([pic.path], ['piccolostar']);
+			}
+		});
+
+		$('#preview-toolbar-delete').on('click', function () {
+			var pic = $('#preview').data('pic');
+			openDialog({
+				title: 'Delete Pic',
+				content: 'Are you sure?',
+				buttons: [
+					{
+						label: 'Cancel',
+						onclick: function () {
+							this.close();
+						}
+					},
+					{
+						label: 'Delete',
+						onclick: function () {
+							deletePics([pic.path]);
+							this.close();
+							$('.preview-container').empty();
+							$('#preview').hide();
+						}
+					}
+				]
+			});
 		});
 
 		getTagsList();
