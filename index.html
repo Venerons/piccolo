@@ -103,7 +103,7 @@
 		.page {
 			flex: 1;
 		}
-		.container-pics {
+		.pics-container {
 			display: flex;
 			flex-flow: row wrap;
 			align-content: flex-start;
@@ -135,18 +135,6 @@
 			transform: translate(-50%, -50%);
 			max-width: 100%;
 			max-height: 100%;
-		}
-		.pic-toolbar {
-			position: absolute;
-			bottom: 0;
-			left: 0;
-			width: 100%;
-			background: rgba(0, 0, 0, 0.5);
-			display: flex;
-			flex-flow: row nowrap;
-			align-content: flex-start;
-			align-items: center;
-			justify-content: center;
 		}
 		ul {
 			padding: 1rem 2rem;
@@ -276,17 +264,17 @@
 		</span>
 		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
 		<div class="header-buttons">
-			<button id="header-tags" title="Tags" class="button"><i class="icon-tags"></i></button>
-			<button id="header-random" title="Random" class="button"><i class="icon-random"></i></button>
-			<button id="header-rehash" title="Rehash" class="button"><i class="icon-refresh"></i></button>
-			<button id="header-edit" title="Edit" class="button"><i class="icon-edit"></i></button>
+			<button data-action="tags" title="Tags" class="button"><i class="icon-tags"></i></button>
+			<button data-action="random" title="Random" class="button"><i class="icon-random"></i></button>
+			<button data-action="rehash" title="Rehash" class="button"><i class="icon-refresh"></i></button>
+			<button data-action="edit" title="Edit" class="button"><i class="icon-edit"></i></button>
 		</div>		
 	</header>
 
 	<div class="edit-toolbar" style="display: none">
-		<button id="edit-add" title="Tags" class="button"><i class="icon-tags"></i> Add</button>
-		<button id="edit-remove" title="Random" class="button"><i class="icon-tags"></i> Remove</button>
-		<button id="edit-delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
+		<button data-action="add" title="Tags" class="button"><i class="icon-tags"></i> Add</button>
+		<button data-action="remove" title="Random" class="button"><i class="icon-tags"></i> Remove</button>
+		<button data-action="delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
 	</div>
 
 	<div id="container-tags" class="page" style="display: none">
@@ -302,26 +290,39 @@
 		<ul id="tags-list"></ul>
 	</div>
 
-	<div id="container-pics" class="page container-pics" style="display: none"></div>
+	<div id="pics-container" class="page pics-container" style="display: none"></div>
 
 	<div id="preview" class="preview" style="display: none">
 		<div class="preview-toolbar">
-			<button id="preview-toolbar-back" title="Back" class="button"><i class="icon-left"></i></button>
-			<button id="preview-toolbar-star" title="Star" class="button"><i class="icon-star"></i></button>
-			<button id="preview-toolbar-delete" title="Delete" class="button"><i class="icon-delete"></i></button>
+			<button data-action="back" title="Back" class="button"><i class="icon-left"></i></button>
+			<button data-action="star" title="Star" class="button"><i class="icon-star"></i></button>
+			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i></button>
 			<div style="flex: 1"></div>
-			<button id="preview-toolbar-edit" title="Edit" disabled class="button"><i class="icon-edit"></i></button>
+			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i></button>
 		</div>
-		<div class="preview-container">
-			<img src="#">
-		</div>
+		<div class="preview-container"></div>
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
 	<script src="dialog-polyfill.js"></script>
 	<script type="text/javascript">
 
-		var openDialog = function (settings) {
+		var observer = new IntersectionObserver(function (entries, self) {
+			entries.forEach(function (entry) {
+				if (entry.isIntersecting) {
+					//console.log('Pic ' + entry.target + ' is in the viewport!');
+					// load image
+					render_pic(entry.target);
+					// Stop watching and load the image
+					self.unobserve(entry.target);
+				}
+			});
+		}, {
+			rootMargin: '0px 0px 0px 0px',
+			threshold: 1
+		});
+
+		var open_dialog = function (settings) {
 			var dialogID = 'dialog-' + Date.now();
 			var $dialog = $(
 				'<dialog id="' + dialogID + '" class="dialog">' +
@@ -375,8 +376,8 @@
 			return dialog;
 		};
 
-		var openAlert = function (title, message) {
-			openDialog({
+		var open_alert = function (title, message) {
+			open_dialog({
 				title: title,
 				content: '<p style="text-align: center">' + message + '</p>',
 				buttons: [
@@ -390,7 +391,7 @@
 			});
 		};
 
-		var getTagsList = function () {
+		var get_tags_list = function () {
 			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
 			$controls.prop('disabled', true);
 			$.ajax({
@@ -398,25 +399,25 @@
 				url: '/api?action=list_tags',
 				dataType: 'json'
 			}).fail(function () {
-				console.error('getTagsList', 'fail');
+				console.error('get_tags_list', 'fail');
 				$controls.prop('disabled', false);
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				$controls.prop('disabled', false);
 				if (data.status !== 'ok') {
-					console.error('getTagsList', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					console.error('get_tags_list', data.status, data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
 					var $datalist = $('#datalist-tags').empty().data('tags', data.tags);
 					data.tags.forEach(function (tag) {
 						$datalist.append('<option value="' + tag.label + '"></option>');
 					});
-					renderTagsList();
+					render_tags_list();
 				}
 			});
 		};
 
-		var renderTagsList = function (mode) {
+		var render_tags_list = function (mode) {
 			var tags = $('#datalist-tags').data('tags');
 			if (!mode) {
 				mode = $('#tags-sorting').val();
@@ -446,7 +447,7 @@
 			});
 		};
 
-		var getPicsList = function (tags) {
+		var get_pics_list = function (tags) {
 			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
 			$controls.prop('disabled', true);
 			$.ajax({
@@ -454,21 +455,21 @@
 				url: '/api?action=list_pics&tags=' + tags.join(','),
 				dataType: 'json'
 			}).fail(function () {
-				console.error('getPicsList', 'fail');
+				console.error('get_pics_list', 'fail');
 				$controls.prop('disabled', false);
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				$controls.prop('disabled', false);
 				if (data.status !== 'ok') {
-					console.error('getPicsList', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					console.error('get_pics_list', data.status, data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					renderPicsList(data.pics);
+					render_pics_list(data.pics);
 				}
 			});
 		};
 
-		var getRandomPicsList = function (tags) {
+		var get_random_pics_list = function () {
 			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
 			$controls.prop('disabled', true);
 			$.ajax({
@@ -476,75 +477,117 @@
 				url: '/api?action=random_pics',
 				dataType: 'json'
 			}).fail(function () {
-				console.error('getRandomPicsList', 'fail');
+				console.error('get_random_pics_list', 'fail');
 				$controls.prop('disabled', false);
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				$controls.prop('disabled', false);
 				if (data.status !== 'ok') {
-					console.error('getRandomPicsList', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					console.error('get_random_pics_list', data.status, data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					renderPicsList(data.pics);
+					render_pics_list(data.pics);
 				}
 			});
 		};
 
-		var renderPicsList = function (pics) {
-			var $container = $('#container-pics').empty().data('pics', pics);
+		var render_pics_list = function (pics) {
+			var $container = $('#pics-container').empty().data('pics', pics);
 			pics.forEach(function (pic) {
 				var $pic = $(
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
 						'<div class="pic-content"></div>' +
 						(pic.tags.indexOf('piccolostar') !== -1 ? '<i class="icon-tags" style="position: absolute; top: 0; left: 0; color: gold"></i>' : '') +
-						/*
-						'<div class="pic-toolbar">' +
-							'<span style="flex: 1"></span>' +
-							'<span style="color: rgba(255, 255, 255, 0.5); margin: 0 0.5rem; font-size: 0.8rem">' + pic.ext + '</span>' +
-						'</div>' +
-						*/
 					'</div>');
 				$pic.data('pic', pic);
-				var element;
-				if (['gif'].indexOf(pic.ext) !== -1) {
-					element = document.createElement('canvas');
-					var context = element.getContext('2d'),
-						img = new Image();
-					img.onload = function () {
-						element.height = 100;
-						element.width = element.height * img.naturalWidth / img.naturalHeight;
-						context.drawImage(img, 0, 0, element.width, element.height);
-						element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
-					};
-					img.src = '/pic?path=' + encodeURIComponent(pic.path);
-				} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
-					element = document.createElement('video');
-					element.autoplay = false;
-					element.controls = false;
-					element.loop = true;
-					element.muted = true;
-					element.addEventListener('mouseover', function () {
-						element.play();
-					});
-					element.addEventListener('mouseout', function () {
-						element.pause();
-					});
-					element.addEventListener('loadedmetadata', function () {
-						element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-					});
-					element.src = '/pic?path=' + encodeURIComponent(pic.path);
-				} else {
-					element = new Image();
-					element.onload = function () {
-						element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-					};
-					element.src = '/pic?path=' + encodeURIComponent(pic.path);
-				}
-				$pic.find('.pic-content').append(element);
+				observer.observe($pic[0]);
 				$container.append($pic);
 			});
 			$('.page').hide();
-			$('#container-pics').show();
+			$('#pics-container').show();
+		};
+
+		var render_pic = function (pic_element) {
+			var $pic = $(pic_element),
+				pic = $pic.data('pic'),
+				element;
+			if (['gif'].indexOf(pic.ext) !== -1) {
+				element = document.createElement('canvas');
+				var context = element.getContext('2d'),
+					img = new Image();
+				img.onload = function () {
+					element.height = 100;
+					element.width = element.height * img.naturalWidth / img.naturalHeight;
+					context.drawImage(img, 0, 0, element.width, element.height);
+					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
+				};
+				img.src = '/pic?path=' + encodeURIComponent(pic.path);
+			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
+				element = document.createElement('video');
+				element.autoplay = false;
+				element.controls = false;
+				element.loop = true;
+				element.muted = true;
+				element.addEventListener('mouseover', function () {
+					element.play();
+				});
+				element.addEventListener('mouseout', function () {
+					element.pause();
+				});
+				element.addEventListener('loadedmetadata', function () {
+					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+				});
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			} else {
+				element = new Image();
+				element.setAttribute('loading', 'lazy');
+				element.onload = function () {
+					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+				};
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			}
+			$pic.find('.pic-content').append(element);
+		};
+
+		var preview_open = function () {
+			var $preview = $('#preview');
+			if (!$preview.hasClass('preview-open')) {
+				$preview.addClass('preview-open').show();
+			}
+		};
+
+		var preview_close = function () {
+			var $preview = $('#preview');
+			if ($preview.hasClass('preview-open')) {
+				$preview.find('.preview-container').empty();
+				$preview.removeClass('preview-open').hide();
+			}
+		};
+
+		var preview_render_pic = function (pic) {
+			var $preview = $('#preview'),
+				$preview_container = $preview.find('.preview-container').empty();
+			$preview.data('pic', pic);
+			var element;
+			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
+				element = document.createElement('video');
+				element.autoplay = true;
+				element.controls = true;
+				element.loop = true;
+				element.muted = false;
+				element.addEventListener('loadedmetadata', function () {
+					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
+					$preview_container.append(element);
+				});
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			} else {
+				element = new Image();
+				element.onload = function () {
+					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
+					$preview_container.append(element);
+				};
+				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+			}
 		};
 
 		var executeRehash = function () {
@@ -557,16 +600,16 @@
 			}).fail(function () {
 				console.error('executeRehash', 'fail');
 				$controls.prop('disabled', false);
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				$controls.prop('disabled', false);
 				if (data.status !== 'ok') {
 					console.error('executeRehash', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					openAlert('Rehash Completed', 'Rehash has been completed successfully.');
+					open_alert('Rehash Completed', 'Rehash has been completed successfully.');
 				}
-				getTagsList();
+				get_tags_list();
 			});
 		};
 
@@ -577,15 +620,15 @@
 				dataType: 'json'
 			}).fail(function () {
 				console.error('addTags', 'fail');
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				if (data.status !== 'ok') {
 					console.error('addTags', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					openAlert('Tags Added', 'Tags has been added successfully.');
+					open_alert('Tags Added', 'Tags has been added successfully.');
 				}
-				getTagsList();
+				get_tags_list();
 			});
 		};
 
@@ -596,15 +639,15 @@
 				dataType: 'json'
 			}).fail(function () {
 				console.error('removeTags', 'fail');
-				openAlert('Error', 'Request Failed.');
+				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				if (data.status !== 'ok') {
 					console.error('removeTags', data.status, data.error);
-					openAlert('Error', 'status = ' + data.status + ', error = ' + data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					openAlert('Tags Removed', 'Tags has been removed successfully.');
+					open_alert('Tags Removed', 'Tags has been removed successfully.');
 				}
-				getTagsList();
+				get_tags_list();
 			});
 		};
 
@@ -619,9 +662,9 @@
 				if (data.status !== 'ok') {
 					console.error('deletePics', data.status, data.error);
 				} else {
-					openAlert('Pics Deleted', 'Pics has been deleted successfully.');
+					open_alert('Pics Deleted', 'Pics has been deleted successfully.');
 				}
-				getTagsList();
+				get_tags_list();
 			});
 		};
 
@@ -634,159 +677,159 @@
 				return tag.trim();
 			});
 			if (tags.length !== 0) {
-				getPicsList(tags);
+				get_pics_list(tags);
 			}
 		});
-		$('#header-tags').on('click', function () {
-			$('.page').hide();
-			$('#header-edit').removeClass('button-active');
-			$('.edit-toolbar').hide();
-			$('.pic-selected').removeClass('pic-selected');
-			delete window.EDIT_MODE;
-			$('#container-tags').show();
-		});
-		$('#header-random').on('click', function () {
-			getRandomPicsList();
-		});
-		$('#header-rehash').on('click', function () {
-			var r = confirm('Execute reshash?');
-			if (r) {
-				executeRehash();
-			}
-		});
-		$('#header-edit').on('click', function () {
-			var $this = $(this),
-				$toolbar = $('.edit-toolbar');
-			if ($this.hasClass('button-active')) {
-				$this.removeClass('button-active');
-				$toolbar.hide();
+
+		$('#header-buttons').on('click', '[data-action]', function () {
+			var action = $(this).data('action');
+			if (action === 'tags') {
+				$('.page').hide();
+				$('#header-edit').removeClass('button-active');
+				$('.edit-toolbar').hide();
 				$('.pic-selected').removeClass('pic-selected');
 				delete window.EDIT_MODE;
-			} else {
-				$this.addClass('button-active');
-				$toolbar.show();
-				window.EDIT_MODE = true;
-			}
-		});
-
-		$('#edit-add').on('click', function () {
-			var pics = [];
-			$('.pic-selected').each(function () {
-				var $pic = $(this),
-					pic = $pic.data('pic');
-				if (pic) {
-					pics.push(pic.path);
+				$('#container-tags').show();
+			} else if (action === 'random') {
+				get_random_pics_list();
+			} else if (action === 'rehash') {
+				var r = confirm('Execute reshash?');
+				if (r) {
+					executeRehash();
 				}
-			});
-			if (pics.length === 0) {
-				return;
-			}
-			var $content = $('<input type="text" list="datalist-tags" placeholder="Tag_1,Tag_2" style="width: 100%">');
-			openDialog({
-				title: 'Add Tags',
-				content: $content,
-				buttons: [
-					{
-						label: 'Cancel',
-						onclick: function () {
-							this.close();
-						}
-					},
-					{
-						label: 'Add',
-						onclick: function () {
-							var tags = $content.filter('input').val().split(',');
-							addTags(pics, tags);
-							this.close();
-						}
-					}
-				]
-			});
-		});
-
-		$('#edit-remove').on('click', function () {
-			var pics = [],
-				tags = [];
-			$('.pic-selected').each(function () {
-				var $pic = $(this),
-					pic = $pic.data('pic');
-				if (pic) {
-					pics.push(pic.path);
-					pic.tags.forEach(function (tag) {
-						if (tags.indexOf(tag) === -1) {
-							tags.push(tag);
-						}
-					});
+			} else if (action === 'edit') {
+				var $this = $(this),
+					$toolbar = $('.edit-toolbar');
+				if ($this.hasClass('button-active')) {
+					$this.removeClass('button-active');
+					$toolbar.hide();
+					$('.pic-selected').removeClass('pic-selected');
+					delete window.EDIT_MODE;
+				} else {
+					$this.addClass('button-active');
+					$toolbar.show();
+					window.EDIT_MODE = true;
 				}
-			});
-			if (pics.length === 0) {
-				return;
 			}
-			var $content = $(
-				'<datalist id="datalist-tags-remove"></datalist>' +
-				'<input type="text" list="datalist-tags-remove" placeholder="Tag_1,Tag_2" style="width: 100%">');
-			var $datalist = $content.filter('datalist');
-			tags.forEach(function (tag) {
-				$datalist.append('<option value="' + tag + '"></option>');
-			});
-			openDialog({
-				title: 'Remove Tags',
-				content: $content,
-				buttons: [
-					{
-						label: 'Cancel',
-						onclick: function () {
-							this.close();
-						}
-					},
-					{
-						label: 'Remove',
-						onclick: function () {
-							var tags = $content.filter('input').val().split(',');
-							removeTags(pics, tags);
-							this.close();
-						}
-					}
-				]
-			});
 		});
 
-		$('#edit-delete').on('click', function () {
-			var pics = [];
-			$('.pic-selected').each(function () {
-				var $pic = $(this),
-					pic = $pic.data('pic');
-				if (pic) {
-					pics.push(pic.path);
+		$('#edit-toolbar').on('click', '[data-action]', function () {
+			var action = $(this).data('action');
+			if (action === 'add') {
+				var pics = [];
+				$('.pic-selected').each(function () {
+					var $pic = $(this),
+						pic = $pic.data('pic');
+					if (pic) {
+						pics.push(pic.path);
+					}
+				});
+				if (pics.length === 0) {
+					return;
 				}
-			});
-			if (pics.length === 0) {
-				return;
-			}
-			openDialog({
-				title: 'Delete Pics',
-				content: 'Are you sure?',
-				buttons: [
-					{
-						label: 'Cancel',
-						onclick: function () {
-							this.close();
+				var $content = $('<input type="text" list="datalist-tags" placeholder="Tag_1,Tag_2" style="width: 100%">');
+				open_dialog({
+					title: 'Add Tags',
+					content: $content,
+					buttons: [
+						{
+							label: 'Cancel',
+							onclick: function () {
+								this.close();
+							}
+						},
+						{
+							label: 'Add',
+							onclick: function () {
+								var tags = $content.filter('input').val().split(',');
+								addTags(pics, tags);
+								this.close();
+							}
 						}
-					},
-					{
-						label: 'Delete',
-						onclick: function () {
-							deletePics(pics);
-							this.close();
-						}
+					]
+				});
+			} else if (action === 'remove') {
+				var pics = [],
+					tags = [];
+				$('.pic-selected').each(function () {
+					var $pic = $(this),
+						pic = $pic.data('pic');
+					if (pic) {
+						pics.push(pic.path);
+						pic.tags.forEach(function (tag) {
+							if (tags.indexOf(tag) === -1) {
+								tags.push(tag);
+							}
+						});
 					}
-				]
-			});
+				});
+				if (pics.length === 0) {
+					return;
+				}
+				var $content = $(
+					'<datalist id="datalist-tags-remove"></datalist>' +
+					'<input type="text" list="datalist-tags-remove" placeholder="Tag_1,Tag_2" style="width: 100%">');
+				var $datalist = $content.filter('datalist');
+				tags.forEach(function (tag) {
+					$datalist.append('<option value="' + tag + '"></option>');
+				});
+				open_dialog({
+					title: 'Remove Tags',
+					content: $content,
+					buttons: [
+						{
+							label: 'Cancel',
+							onclick: function () {
+								this.close();
+							}
+						},
+						{
+							label: 'Remove',
+							onclick: function () {
+								var tags = $content.filter('input').val().split(',');
+								removeTags(pics, tags);
+								this.close();
+							}
+						}
+					]
+				});
+			} else if (action === 'delete') {
+				var pics = [];
+				$('.pic-selected').each(function () {
+					var $pic = $(this),
+						pic = $pic.data('pic');
+					if (pic) {
+						pics.push(pic.path);
+					}
+				});
+				if (pics.length === 0) {
+					return;
+				}
+				open_dialog({
+					title: 'Delete Pics',
+					content: 'Are you sure?',
+					buttons: [
+						{
+							label: 'Cancel',
+							onclick: function () {
+								this.close();
+							}
+						},
+						{
+							label: 'Delete',
+							onclick: function () {
+								deletePics(pics);
+								this.close();
+							}
+						}
+					]
+				});
+			}
 		});
 
-		$('#tags-sorting').on('click', function () {
+		$('#tags-sorting').on('change', function () {
 			var sorting = $(this).val();
-			renderTagsList(sorting);
+			render_tags_list(sorting);
 		});
 
 		$('#tags-list').on('click', 'li', function () {
@@ -794,76 +837,96 @@
 			$('#header-search').val(tag).trigger('change');
 		});
 
-		$('#container-pics').on('click', '.pic', function () {
+		$('#pics-container').on('click', '.pic', function () {
 			var $pic = $(this);
 			if (window.EDIT_MODE) {
 				$pic.toggleClass('pic-selected');
 			} else {
 				var pic = $(this).data('pic');
-				$('#preview').data('pic', pic).show();
-				var element;
-				if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
-					element = document.createElement('video');
-					element.autoplay = true;
-					element.controls = true;
-					element.loop = true;
-					element.muted = false;
-					element.addEventListener('loadedmetadata', function () {
-						element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-						$('.preview-container').empty().append(element);
-					});
-					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				preview_render_pic(pic);
+				preview_open();
+			}
+		});
+
+		$('.preview-toolbar').on('click', '[data-action]', function () {
+			var action = $(this).data('action');
+			if (action === 'back') {
+				preview_close();
+			} else if (action === 'star') {
+				var pic = $('#preview').data('pic');
+				if (pic.tags.indexOf('piccolostar') === -1) {
+					addTags([pic.path], ['piccolostar']);
 				} else {
-					element = new Image();
-					element.onload = function () {
-						element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-						$('.preview-container').empty().append(element);
-					};
-					element.src = '/pic?path=' + encodeURIComponent(pic.path);
+					removeTags([pic.path], ['piccolostar']);
 				}
-			}
-		});
-
-		$('#preview-toolbar-back').on('click', function () {
-			$('.preview-container').empty();
-			$('#preview').hide();
-		});
-
-		$('#preview-toolbar-star').on('click', function () {
-			var pic = $('#preview').data('pic');
-			if (pic.tags.indexOf('piccolostar') === -1) {
-				addTags([pic.path], ['piccolostar']);
-			} else {
-				removeTags([pic.path], ['piccolostar']);
-			}
-		});
-
-		$('#preview-toolbar-delete').on('click', function () {
-			var pic = $('#preview').data('pic');
-			openDialog({
-				title: 'Delete Pic',
-				content: 'Are you sure?',
-				buttons: [
-					{
-						label: 'Cancel',
-						onclick: function () {
-							this.close();
+			} else if (action === 'delete') {
+				var pic = $('#preview').data('pic');
+				open_dialog({
+					title: 'Delete Pic',
+					content: 'Are you sure?',
+					buttons: [
+						{
+							label: 'Cancel',
+							onclick: function () {
+								this.close();
+							}
+						},
+						{
+							label: 'Delete',
+							onclick: function () {
+								deletePics([pic.path]);
+								this.close();
+								preview_close();
+							}
 						}
-					},
-					{
-						label: 'Delete',
-						onclick: function () {
-							deletePics([pic.path]);
-							this.close();
-							$('.preview-container').empty();
-							$('#preview').hide();
+					]
+				});
+			} else if (action === 'edit') {
+				// TODO
+			}
+		});
+
+		document.getElementById('preview').addEventListener('keyup', function (event) {
+			if (event.key === 'ArrowLeft') {
+				var current_pic = $('#preview').data('pic'),
+					pics_list = $('#pics-container').data('pics', pics);
+				if (current_pic && pics_list) {
+					var previous_pic;
+					for (var i = 0; i < pics_list.length; ++i) {
+						if (pics_list[i].path === current_pic.path) {
+							if (pics_list[i - 1]) {
+								previous_pic = pics_list[i - 1];
+							}
+							break;
 						}
 					}
-				]
-			});
-		});
+					if (previous_pic) {
+						preview_render_pic(previous_pic);
+					}
+				}
+			} else if (event.key === 'ArrowRight') {
+				var current_pic = $('#preview').data('pic'),
+					pics_list = $('#pics-container').data('pics', pics);
+				if (current_pic && pics_list) {
+					var next_pic;
+					for (var i = 0; i < pics_list.length; ++i) {
+						if (pics_list[i].path === current_pic.path) {
+							if (pics_list[i + 1]) {
+								next_pic = pics_list[i + 1];
+							}
+							break;
+						}
+					}
+					if (next_pic) {
+						preview_render_pic(next_pic);
+					}
+				}
+			} else if (event.key === 'Escape') {
+				preview_close();
+			}
+		}, false);
 
-		getTagsList();
+		get_tags_list();
 	</script>
 </body>
 </html>
