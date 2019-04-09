@@ -681,7 +681,7 @@
 			}
 		});
 
-		$('#header-buttons').on('click', '[data-action]', function () {
+		$('.header-buttons').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
 			if (action === 'tags') {
 				$('.page').hide();
@@ -713,7 +713,7 @@
 			}
 		});
 
-		$('#edit-toolbar').on('click', '[data-action]', function () {
+		$('.edit-toolbar').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
 			if (action === 'add') {
 				var pics = [];
@@ -886,10 +886,14 @@
 			}
 		});
 
-		document.getElementById('preview').addEventListener('keyup', function (event) {
+		document.addEventListener('keyup', function (event) {
+			var $preview = $('#preview');
+			if (!$preview.hasClass('preview-open')) {
+				return;
+			}
 			if (event.key === 'ArrowLeft') {
-				var current_pic = $('#preview').data('pic'),
-					pics_list = $('#pics-container').data('pics', pics);
+				var current_pic = $preview.data('pic'),
+					pics_list = $('#pics-container').data('pics');
 				if (current_pic && pics_list) {
 					var previous_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
@@ -905,8 +909,8 @@
 					}
 				}
 			} else if (event.key === 'ArrowRight') {
-				var current_pic = $('#preview').data('pic'),
-					pics_list = $('#pics-container').data('pics', pics);
+				var current_pic = $preview.data('pic'),
+					pics_list = $('#pics-container').data('pics');
 				if (current_pic && pics_list) {
 					var next_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
