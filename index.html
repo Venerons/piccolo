@@ -103,7 +103,18 @@
 		.page {
 			flex: 1;
 		}
+		.tags-list {
+			padding: 1rem 2rem;
+		}
+		.pics-page {
+			display: flex;
+			flex-flow: column nowrap;
+			justify-content: stretch;
+			align-items: stretch;
+			align-content: stretch;
+		}
 		.pics-container {
+			overflow: auto;
 			display: flex;
 			flex-flow: row wrap;
 			align-content: flex-start;
@@ -136,36 +147,25 @@
 			max-width: 100%;
 			max-height: 100%;
 		}
-		ul {
-			padding: 1rem 2rem;
-		}
-		.preview {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			z-index: 200;
-			background: rgba(0, 0, 0, 0.9);
+		.preview-page {
+			display: flex;
+			flex-flow: column nowrap;
+			justify-content: stretch;
+			align-items: stretch;
+			align-content: stretch;
 		}
 		.preview-toolbar {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			z-index: 202;
-			background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent);
 			display: flex;
 			flex-flow: row nowrap;
 			align-items: center;
+			padding: 0 1rem;
+			background: #222;
+			border-bottom: 2px solid dodgerblue;
+			box-shadow: 0px 3px 5px 0px black;
 		}
 		.preview-container {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			z-index: 201;
+			flex: 1;
+			position: relative;
 		}
 		.preview-container > img,
 		.preview-container > video {
@@ -271,13 +271,7 @@
 		</div>		
 	</header>
 
-	<div class="edit-toolbar" style="display: none">
-		<button data-action="add" title="Tags" class="button"><i class="icon-tags"></i> Add</button>
-		<button data-action="remove" title="Random" class="button"><i class="icon-tags"></i> Remove</button>
-		<button data-action="delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
-	</div>
-
-	<div id="container-tags" class="page" style="display: none">
+	<div id="page-tags" class="page" style="display: none">
 		<div class="flex-row">
 			<span>Sorting</span>
 			<select id="tags-sorting" style="margin: 1rem">
@@ -287,18 +281,23 @@
 				<option value="count-desc">Count Descendant</option>
 			</select>
 		</div>
-		<ul id="tags-list"></ul>
+		<ul class="tags-list"></ul>
 	</div>
 
-	<div id="pics-container" class="page pics-container" style="display: none"></div>
+	<div id="page-pics" class="page pics-page" style="display: none">
+		<div class="pics-toolbar" style="display: none">
+			<button data-action="delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
+		</div>
+		<div class="pics-container"></div>
+	</div>
 
-	<div id="preview" class="preview" style="display: none">
+	<div id="page-preview" class="page preview-page" style="display: none">
 		<div class="preview-toolbar">
-			<button data-action="back" title="Back" class="button"><i class="icon-left"></i></button>
-			<button data-action="star" title="Star" class="button"><i class="icon-star"></i></button>
-			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i></button>
+			<button data-action="back" title="Back" class="button"><i class="icon-left"></i> Back</button>
+			<button data-action="star" title="Star" class="button"><i class="icon-star"></i> Star</button>
+			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i> Delete</button>
 			<div style="flex: 1"></div>
-			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i></button>
+			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i> Edit</button>
 		</div>
 		<div class="preview-container"></div>
 	</div>
@@ -439,7 +438,7 @@
 					return a.count > b.count ? -1 : 1;
 				});
 			}
-			var $list = $('#tags-list').empty();
+			var $list = $('.tags-list').empty();
 			tags.forEach(function (tag) {
 				var $li = $('<li><a>' + tag.label + ' (' + tag.count + ')</a></li>');
 				$li.data('tag', tag.label);
@@ -452,7 +451,7 @@
 			$controls.prop('disabled', true);
 			$.ajax({
 				type: 'GET',
-				url: '/api?action=list_pics&tags=' + tags.join(','),
+				url: '/api?action=list_pics&tags=' + encodeURIComponent(JSON.stringify(tags)),
 				dataType: 'json'
 			}).fail(function () {
 				console.error('get_pics_list', 'fail');
@@ -492,7 +491,7 @@
 		};
 
 		var render_pics_list = function (pics) {
-			var $container = $('#pics-container').empty().data('pics', pics);
+			var $container = $('.pics-container').empty().data('pics', pics);
 			pics.forEach(function (pic) {
 				var $pic = $(
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
@@ -504,7 +503,7 @@
 				$container.append($pic);
 			});
 			$('.page').hide();
-			$('#pics-container').show();
+			$('#page-pics').show();
 		};
 
 		var render_pic = function (pic_element) {
@@ -549,23 +548,14 @@
 			$pic.find('.pic-content').append(element);
 		};
 
-		var preview_open = function () {
-			var $preview = $('#preview');
-			if (!$preview.hasClass('preview-open')) {
-				$preview.addClass('preview-open').show();
-			}
-		};
-
-		var preview_close = function () {
-			var $preview = $('#preview');
-			if ($preview.hasClass('preview-open')) {
-				$preview.find('.preview-container').empty();
-				$preview.removeClass('preview-open').hide();
-			}
+		var goto_page = function (id) {
+			$('.page').hide();
+			$('#page-preview').find('.preview-container').empty();
+			$('#' + id).show();
 		};
 
 		var preview_render_pic = function (pic) {
-			var $preview = $('#preview'),
+			var $preview = $('#page-preview'),
 				$preview_container = $preview.find('.preview-container').empty();
 			$preview.data('pic', pic);
 			var element;
@@ -613,54 +603,35 @@
 			});
 		};
 
-		var addTags = function (pics, tags) {
+		var edit_pics = function (pics, tags) {
 			$.ajax({
 				type: 'GET',
-				url: '/api?action=tags&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&add=' + encodeURIComponent(JSON.stringify(tags)),
+				url: '/api?action=edit_pics&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&tags=' + encodeURIComponent(JSON.stringify(tags)),
 				dataType: 'json'
 			}).fail(function () {
-				console.error('addTags', 'fail');
+				console.error('edit_pics', 'fail');
 				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				if (data.status !== 'ok') {
-					console.error('addTags', data.status, data.error);
+					console.error('edit_pics', data.status, data.error);
 					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
-					open_alert('Tags Added', 'Tags has been added successfully.');
+					open_alert('Tags Edited', 'Tags has been edited successfully.');
 				}
 				get_tags_list();
 			});
 		};
 
-		var removeTags = function (pics, tags) {
+		var remove_pics = function (pics) {
 			$.ajax({
 				type: 'GET',
-				url: '/api?action=tags&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&remove=' + encodeURIComponent(JSON.stringify(tags)),
+				url: '/api?action=remove_pics&pics=' + encodeURIComponent(JSON.stringify(pics)),
 				dataType: 'json'
 			}).fail(function () {
-				console.error('removeTags', 'fail');
-				open_alert('Error', 'Request Failed.');
+				console.error('remove_pics', 'fail');
 			}).done(function (data) {
 				if (data.status !== 'ok') {
-					console.error('removeTags', data.status, data.error);
-					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
-				} else {
-					open_alert('Tags Removed', 'Tags has been removed successfully.');
-				}
-				get_tags_list();
-			});
-		};
-
-		var deletePics = function (pics) {
-			$.ajax({
-				type: 'GET',
-				url: '/api?action=delete_pics&pics=' + encodeURIComponent(JSON.stringify(pics)),
-				dataType: 'json'
-			}).fail(function () {
-				console.error('deletePics', 'fail');
-			}).done(function (data) {
-				if (data.status !== 'ok') {
-					console.error('deletePics', data.status, data.error);
+					console.error('remove_pics', data.status, data.error);
 				} else {
 					open_alert('Pics Deleted', 'Pics has been deleted successfully.');
 				}
@@ -686,10 +657,10 @@
 			if (action === 'tags') {
 				$('.page').hide();
 				$('#header-edit').removeClass('button-active');
-				$('.edit-toolbar').hide();
+				$('.pics-toolbar').hide();
 				$('.pic-selected').removeClass('pic-selected');
 				delete window.EDIT_MODE;
-				$('#container-tags').show();
+				$('#page-tags').show();
 			} else if (action === 'random') {
 				get_random_pics_list();
 			} else if (action === 'rehash') {
@@ -699,7 +670,7 @@
 				}
 			} else if (action === 'edit') {
 				var $this = $(this),
-					$toolbar = $('.edit-toolbar');
+					$toolbar = $('.pics-toolbar');
 				if ($this.hasClass('button-active')) {
 					$this.removeClass('button-active');
 					$toolbar.hide();
@@ -713,87 +684,9 @@
 			}
 		});
 
-		$('.edit-toolbar').on('click', '[data-action]', function () {
+		$('.pics-toolbar').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
-			if (action === 'add') {
-				var pics = [];
-				$('.pic-selected').each(function () {
-					var $pic = $(this),
-						pic = $pic.data('pic');
-					if (pic) {
-						pics.push(pic.path);
-					}
-				});
-				if (pics.length === 0) {
-					return;
-				}
-				var $content = $('<input type="text" list="datalist-tags" placeholder="Tag_1,Tag_2" style="width: 100%">');
-				open_dialog({
-					title: 'Add Tags',
-					content: $content,
-					buttons: [
-						{
-							label: 'Cancel',
-							onclick: function () {
-								this.close();
-							}
-						},
-						{
-							label: 'Add',
-							onclick: function () {
-								var tags = $content.filter('input').val().split(',');
-								addTags(pics, tags);
-								this.close();
-							}
-						}
-					]
-				});
-			} else if (action === 'remove') {
-				var pics = [],
-					tags = [];
-				$('.pic-selected').each(function () {
-					var $pic = $(this),
-						pic = $pic.data('pic');
-					if (pic) {
-						pics.push(pic.path);
-						pic.tags.forEach(function (tag) {
-							if (tags.indexOf(tag) === -1) {
-								tags.push(tag);
-							}
-						});
-					}
-				});
-				if (pics.length === 0) {
-					return;
-				}
-				var $content = $(
-					'<datalist id="datalist-tags-remove"></datalist>' +
-					'<input type="text" list="datalist-tags-remove" placeholder="Tag_1,Tag_2" style="width: 100%">');
-				var $datalist = $content.filter('datalist');
-				tags.forEach(function (tag) {
-					$datalist.append('<option value="' + tag + '"></option>');
-				});
-				open_dialog({
-					title: 'Remove Tags',
-					content: $content,
-					buttons: [
-						{
-							label: 'Cancel',
-							onclick: function () {
-								this.close();
-							}
-						},
-						{
-							label: 'Remove',
-							onclick: function () {
-								var tags = $content.filter('input').val().split(',');
-								removeTags(pics, tags);
-								this.close();
-							}
-						}
-					]
-				});
-			} else if (action === 'delete') {
+			if (action === 'delete') {
 				var pics = [];
 				$('.pic-selected').each(function () {
 					var $pic = $(this),
@@ -818,7 +711,7 @@
 						{
 							label: 'Delete',
 							onclick: function () {
-								deletePics(pics);
+								remove_pics(pics);
 								this.close();
 							}
 						}
@@ -832,26 +725,26 @@
 			render_tags_list(sorting);
 		});
 
-		$('#tags-list').on('click', 'li', function () {
+		$('.tags-list').on('click', 'li', function () {
 			var tag = $(this).data('tag');
 			$('#header-search').val(tag).trigger('change');
 		});
 
-		$('#pics-container').on('click', '.pic', function () {
+		$('.pics-container').on('click', '.pic', function () {
 			var $pic = $(this);
 			if (window.EDIT_MODE) {
 				$pic.toggleClass('pic-selected');
 			} else {
-				var pic = $(this).data('pic');
+				var pic = $pic.data('pic');
+				goto_page('page-preview');
 				preview_render_pic(pic);
-				preview_open();
 			}
 		});
 
 		$('.preview-toolbar').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
 			if (action === 'back') {
-				preview_close();
+				goto_page('page-pics');
 			} else if (action === 'star') {
 				var pic = $('#preview').data('pic');
 				if (pic.tags.indexOf('piccolostar') === -1) {
@@ -874,9 +767,9 @@
 						{
 							label: 'Delete',
 							onclick: function () {
-								deletePics([pic.path]);
+								remove_pics([pic.path]);
 								this.close();
-								preview_close();
+								goto_page('page-pics');
 							}
 						}
 					]
@@ -886,6 +779,7 @@
 			}
 		});
 
+		/*
 		document.addEventListener('keyup', function (event) {
 			var $preview = $('#preview');
 			if (!$preview.hasClass('preview-open')) {
@@ -893,7 +787,7 @@
 			}
 			if (event.key === 'ArrowLeft') {
 				var current_pic = $preview.data('pic'),
-					pics_list = $('#pics-container').data('pics');
+					pics_list = $('.pics-container').data('pics');
 				if (current_pic && pics_list) {
 					var previous_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
@@ -910,7 +804,7 @@
 				}
 			} else if (event.key === 'ArrowRight') {
 				var current_pic = $preview.data('pic'),
-					pics_list = $('#pics-container').data('pics');
+					pics_list = $('.pics-container').data('pics');
 				if (current_pic && pics_list) {
 					var next_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
@@ -926,9 +820,10 @@
 					}
 				}
 			} else if (event.key === 'Escape') {
-				preview_close();
+				goto_page('page-pics');
 			}
 		}, false);
+		*/
 
 		get_tags_list();
 	</script>
