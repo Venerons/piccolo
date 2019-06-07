@@ -154,15 +154,6 @@
 			align-items: stretch;
 			align-content: stretch;
 		}
-		.preview-toolbar {
-			display: flex;
-			flex-flow: row nowrap;
-			align-items: center;
-			padding: 0 1rem;
-			background: #222;
-			border-bottom: 2px solid dodgerblue;
-			box-shadow: 0px 3px 5px 0px black;
-		}
 		.preview-container {
 			flex: 1;
 			position: relative;
@@ -264,12 +255,31 @@
 		</span>
 		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
 		<div class="header-buttons">
-			<button data-action="tags" title="Tags" class="button"><i class="icon-tags"></i></button>
-			<button data-action="random" title="Random" class="button"><i class="icon-random"></i></button>
-			<button data-action="rehash" title="Rehash" class="button"><i class="icon-refresh"></i></button>
-			<button data-action="edit" title="Edit" class="button"><i class="icon-edit"></i></button>
+			<button data-action="pics" title="Pics" class="button"><i class="icon-tags"></i>&nbsp;&nbsp;Pics</button>
+			<button data-action="random" title="Random" class="button"><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
+			<button data-action="tags" title="Tags" class="button"><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
+			<button data-action="rehash" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Rehash</button>
+			<button data-action="upload" title="Upload" class="button"><i class="icon-upload"></i>&nbsp;&nbsp;Upload</button>
 		</div>		
 	</header>
+
+	<div id="page-pics" class="page pics-page">
+		<div class="pics-toolbar flex-row">
+			<button data-action="edit" title="Edit" class="button"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
+			<button data-action="delete" title="Upload" class="button" disabled><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
+		</div>
+		<div class="pics-container"></div>
+	</div>
+
+	<div id="page-preview" class="page preview-page" style="display: none">
+		<div class="preview-toolbar flex-row">
+			<button data-action="back" title="Back" class="button"><i class="icon-left"></i>&nbsp;&nbsp;Back</button>
+			<button data-action="star" title="Star" class="button"><i class="icon-star"></i>&nbsp;&nbsp;Star</button>
+			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
+			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
+		</div>
+		<div class="preview-container"></div>
+	</div>
 
 	<div id="page-tags" class="page" style="display: none">
 		<div class="flex-row">
@@ -284,22 +294,14 @@
 		<ul class="tags-list"></ul>
 	</div>
 
-	<div id="page-pics" class="page pics-page" style="display: none">
-		<div class="pics-toolbar" style="display: none">
-			<button data-action="delete" title="Upload" class="button"><i class="icon-delete"></i> Delete</button>
+	<div id="page-rehash" class="page" style="display: none">
+		<div class="flex-row">
+			<button id="rehash-execute" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Start Collection Rehash</button>
 		</div>
-		<div class="pics-container"></div>
 	</div>
 
-	<div id="page-preview" class="page preview-page" style="display: none">
-		<div class="preview-toolbar">
-			<button data-action="back" title="Back" class="button"><i class="icon-left"></i> Back</button>
-			<button data-action="star" title="Star" class="button"><i class="icon-star"></i> Star</button>
-			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i> Delete</button>
-			<div style="flex: 1"></div>
-			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i> Edit</button>
-		</div>
-		<div class="preview-container"></div>
+	<div id="page-upload" class="page" style="display: none">
+		<h1>Work in Progress</h1>
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -390,10 +392,32 @@
 			});
 		};
 
+		var goto_page = function (id) {
+			$('.page').hide();
+			pics_bulk_edit_off();
+			$('.preview-container').empty();
+			$('#' + id).show();
+		};
+
+		var pics_bulk_edit_on = function () {
+			var $pics_toolbar = $('.pics-toolbar');
+			$pics_toolbar.find('[data-action="edit"]').addClass('button-active');
+			$pics_toolbar.find('[data-action]:disabled').prop('disabled', false);
+			window.EDIT_MODE = true;
+		};
+
+		var pics_bulk_edit_off = function () {
+			var $pics_toolbar = $('.pics-toolbar');
+			$pics_toolbar.find('[data-action="edit"]').removeClass('button-active');
+			$pics_toolbar.find('[data-action]:not([data-action="edit"])').prop('disabled', true);
+			$('.pic-selected').removeClass('pic-selected');
+			delete window.EDIT_MODE;
+		};
+
 		var get_tags_list = function () {
-			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
+			var $controls = $('.header-buttons').find('input, button');
 			$controls.prop('disabled', true);
-			$.ajax({
+			return $.ajax({
 				type: 'GET',
 				url: '/api?action=list_tags',
 				dataType: 'json'
@@ -447,9 +471,9 @@
 		};
 
 		var get_pics_list = function (tags) {
-			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
+			var $controls = $('.header-buttons').find('input, button');
 			$controls.prop('disabled', true);
-			$.ajax({
+			return $.ajax({
 				type: 'GET',
 				url: '/api?action=list_pics&tags=' + encodeURIComponent(JSON.stringify(tags)),
 				dataType: 'json'
@@ -464,14 +488,15 @@
 					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
 					render_pics_list(data.pics);
+					goto_page('page-pics');
 				}
 			});
 		};
 
 		var get_random_pics_list = function () {
-			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
+			var $controls = $('.header-buttons').find('input, button');
 			$controls.prop('disabled', true);
-			$.ajax({
+			return $.ajax({
 				type: 'GET',
 				url: '/api?action=random_pics',
 				dataType: 'json'
@@ -486,12 +511,18 @@
 					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
 					render_pics_list(data.pics);
+					goto_page('page-pics');
 				}
 			});
 		};
 
 		var render_pics_list = function (pics) {
-			var $container = $('.pics-container').empty().data('pics', pics);
+			var $container = $('.pics-container').empty();
+			if (pics) {
+				$container.data('pics', pics);
+			} else {
+				pics = $container.data('pics');
+			}
 			pics.forEach(function (pic) {
 				var $pic = $(
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
@@ -502,8 +533,6 @@
 				observer.observe($pic[0]);
 				$container.append($pic);
 			});
-			$('.page').hide();
-			$('#page-pics').show();
 		};
 
 		var render_pic = function (pic_element) {
@@ -548,12 +577,6 @@
 			$pic.find('.pic-content').append(element);
 		};
 
-		var goto_page = function (id) {
-			$('.page').hide();
-			$('#page-preview').find('.preview-container').empty();
-			$('#' + id).show();
-		};
-
 		var preview_render_pic = function (pic) {
 			var $preview = $('#page-preview'),
 				$preview_container = $preview.find('.preview-container').empty();
@@ -580,21 +603,21 @@
 			}
 		};
 
-		var executeRehash = function () {
-			var $controls = $('#header-search, #header-tags, #header-random, #header-edit');
+		var execute_rehash = function () {
+			var $controls = $('.header-buttons').find('input, button');
 			$controls.prop('disabled', true);
-			$.ajax({
+			return $.ajax({
 				type: 'GET',
 				url: '/api?action=rehash',
 				dataType: 'json'
 			}).fail(function () {
-				console.error('executeRehash', 'fail');
+				console.error('execute_rehash', 'fail');
 				$controls.prop('disabled', false);
 				open_alert('Error', 'Request Failed.');
 			}).done(function (data) {
 				$controls.prop('disabled', false);
 				if (data.status !== 'ok') {
-					console.error('executeRehash', data.status, data.error);
+					console.error('execute_rehash', data.status, data.error);
 					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
 				} else {
 					open_alert('Rehash Completed', 'Rehash has been completed successfully.');
@@ -604,7 +627,7 @@
 		};
 
 		var edit_pics = function (pics, tags) {
-			$.ajax({
+			return $.ajax({
 				type: 'GET',
 				url: '/api?action=edit_pics&pics=' + encodeURIComponent(JSON.stringify(pics)) + '&tags=' + encodeURIComponent(JSON.stringify(tags)),
 				dataType: 'json'
@@ -615,17 +638,23 @@
 				if (data.status !== 'ok') {
 					console.error('edit_pics', data.status, data.error);
 					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
-				} else {
-					open_alert('Tags Edited', 'Tags has been edited successfully.');
 				}
+				render_pics_list();
 				get_tags_list();
 			});
 		};
 
 		var remove_pics = function (pics) {
+			var p = [];
+			pics.forEach(function (pic) {
+				p.push(pic.path);
+			});
+			if (p.length === 0) {
+				return;
+			}
 			$.ajax({
 				type: 'GET',
-				url: '/api?action=remove_pics&pics=' + encodeURIComponent(JSON.stringify(pics)),
+				url: '/api?action=remove_pics&pics=' + encodeURIComponent(JSON.stringify(p)),
 				dataType: 'json'
 			}).fail(function () {
 				console.error('remove_pics', 'fail');
@@ -633,8 +662,21 @@
 				if (data.status !== 'ok') {
 					console.error('remove_pics', data.status, data.error);
 				} else {
-					open_alert('Pics Deleted', 'Pics has been deleted successfully.');
+					pics = $('.pics-container').data('pics');
+					if (pics) {
+						for (var i = 0; i < pics.length; ++i) {
+							var pic_path = pics[i].path;
+							for (var j = 0; j < p.length; ++j) {
+								if (pic_path === p[j]) {
+									pics.splice(i, 1);
+									i--;
+									break;
+								}
+							}
+						}
+					}
 				}
+				render_pics_list();
 				get_tags_list();
 			});
 		};
@@ -654,45 +696,34 @@
 
 		$('.header-buttons').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
-			if (action === 'tags') {
-				$('.page').hide();
-				$('#header-edit').removeClass('button-active');
-				$('.pics-toolbar').hide();
-				$('.pic-selected').removeClass('pic-selected');
-				delete window.EDIT_MODE;
-				$('#page-tags').show();
+			if (action === 'pics') {
+				goto_page('page-pics');
+			} else if (action === 'tags') {
+				goto_page('page-tags');
 			} else if (action === 'random') {
 				get_random_pics_list();
 			} else if (action === 'rehash') {
-				var r = confirm('Execute reshash?');
-				if (r) {
-					executeRehash();
-				}
-			} else if (action === 'edit') {
-				var $this = $(this),
-					$toolbar = $('.pics-toolbar');
-				if ($this.hasClass('button-active')) {
-					$this.removeClass('button-active');
-					$toolbar.hide();
-					$('.pic-selected').removeClass('pic-selected');
-					delete window.EDIT_MODE;
-				} else {
-					$this.addClass('button-active');
-					$toolbar.show();
-					window.EDIT_MODE = true;
-				}
+				goto_page('page-rehash');
+			} else if (action === 'upload') {
+				goto_page('page-upload');
 			}
 		});
 
 		$('.pics-toolbar').on('click', '[data-action]', function () {
 			var action = $(this).data('action');
-			if (action === 'delete') {
+			if (action === 'edit') {
+				if (window.EDIT_MODE) {
+					pics_bulk_edit_off();
+				} else {
+					pics_bulk_edit_on();
+				}
+			} else if (action === 'delete') {
 				var pics = [];
 				$('.pic-selected').each(function () {
 					var $pic = $(this),
 						pic = $pic.data('pic');
 					if (pic) {
-						pics.push(pic.path);
+						pics.push(pic);
 					}
 				});
 				if (pics.length === 0) {
@@ -720,16 +751,6 @@
 			}
 		});
 
-		$('#tags-sorting').on('change', function () {
-			var sorting = $(this).val();
-			render_tags_list(sorting);
-		});
-
-		$('.tags-list').on('click', 'li', function () {
-			var tag = $(this).data('tag');
-			$('#header-search').val(tag).trigger('change');
-		});
-
 		$('.pics-container').on('click', '.pic', function () {
 			var $pic = $(this);
 			if (window.EDIT_MODE) {
@@ -742,18 +763,22 @@
 		});
 
 		$('.preview-toolbar').on('click', '[data-action]', function () {
-			var action = $(this).data('action');
+			var pic = $('#page-preview').data('pic'),
+				action = $(this).data('action');
+			if (!pic) {
+				return;
+			}
 			if (action === 'back') {
 				goto_page('page-pics');
 			} else if (action === 'star') {
-				var pic = $('#preview').data('pic');
-				if (pic.tags.indexOf('piccolostar') === -1) {
-					addTags([pic.path], ['piccolostar']);
+				var star_index = pic.tags.indexOf('piccolostar');
+				if (star_index === -1) {
+					pic.tags.push('piccolostar');
 				} else {
-					removeTags([pic.path], ['piccolostar']);
+					pic.tags.splice(star_index, 1);
 				}
+				edit_pics([pic.path], pic.tags);
 			} else if (action === 'delete') {
-				var pic = $('#preview').data('pic');
 				open_dialog({
 					title: 'Delete Pic',
 					content: 'Are you sure?',
@@ -767,7 +792,7 @@
 						{
 							label: 'Delete',
 							onclick: function () {
-								remove_pics([pic.path]);
+								remove_pics([pic]);
 								this.close();
 								goto_page('page-pics');
 							}
@@ -776,13 +801,13 @@
 				});
 			} else if (action === 'edit') {
 				// TODO
+				open_alert('TODO');
 			}
 		});
 
-		/*
 		document.addEventListener('keyup', function (event) {
-			var $preview = $('#preview');
-			if (!$preview.hasClass('preview-open')) {
+			var $preview = $('#page-preview');
+			if ($preview.css('display') === 'none') {
 				return;
 			}
 			if (event.key === 'ArrowLeft') {
@@ -823,9 +848,26 @@
 				goto_page('page-pics');
 			}
 		}, false);
-		*/
+
+		$('#tags-sorting').on('change', function () {
+			var sorting = $(this).val();
+			render_tags_list(sorting);
+		});
+
+		$('.tags-list').on('click', 'li', function () {
+			var tag = $(this).data('tag');
+			$('#header-search').val(tag).trigger('change');
+		});
+
+		$('#rehash-execute').on('click', function () {
+			var r = confirm('Execute reshash?');
+			if (r) {
+				execute_rehash();
+			}
+		});
 
 		get_tags_list();
+		get_random_pics_list();
 	</script>
 </body>
 </html>
