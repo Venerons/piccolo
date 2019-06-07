@@ -244,7 +244,8 @@ var tags_sorting = function (a, b) {
 var remix_files = function (files_list) {
 	console.log('remix_files...');
 	let timestamp = Date.now(),
-		perc = 1;
+		perc = 0,
+		perc_step = 100 / files_list.length;
 	process.stdout.write('\t[');
 	files_list.forEach(function (filepath, index) {
 		let ext = path.extname(filepath).substring(1).toLowerCase(),
@@ -258,9 +259,9 @@ var remix_files = function (files_list) {
 			}
 			fs.renameSync(path.normalize(filepath), path.normalize(mixed_path));
 		}
-		if (index * 100 / files_list.length > perc) {
+		if ((index + 1) * 100 / files_list.length > perc) {
 			process.stdout.write('#');
-			perc++;
+			perc += perc_step;
 		}
 	});
 	process.stdout.write('] (' + ((Date.now() - timestamp) / 1000) + ' seconds)\n');
@@ -271,7 +272,8 @@ var rehash_files = function (files_list) {
 	console.log('rehash_files...');
 	console.log('\tSearching duplicates...');
 	let timestamp = Date.now(),
-		perc = 1;
+		perc = 0,
+		perc_step = 100 / files_list.length;
 	process.stdout.write('\t[');
 	let hashMap = Object.create(null);
 	let count = 0;
@@ -283,9 +285,9 @@ var rehash_files = function (files_list) {
 		} else {
 			hashMap[digest] = [filepath];
 		}
-		if (index * 100 / files_list.length > perc) {
+		if ((index + 1) * 100 / files_list.length > perc) {
 			process.stdout.write('#');
-			perc++;
+			perc += perc_step;
 		}
 	});
 	process.stdout.write('] (' + ((Date.now() - timestamp) / 1000) + ' seconds)\n');
@@ -294,10 +296,12 @@ var rehash_files = function (files_list) {
 	timestamp = Date.now();
 	let rehashCount = 0,
 		duplicateCount = 0,
-		issues = [];
-	perc = 1;
+		issues = [],
+		hash_array = Object.keys(hashMap);
+	perc = 0;
+	perc_step = 100 / hash_array.length;
 	process.stdout.write('\t[');
-	Object.keys(hashMap).forEach(function (digest, index, hash_array) {
+	hash_array.forEach(function (digest, index) {
 		let tags = [];
 		hashMap[digest].forEach(function (filepath) {
 			let file_tags = path.basename(filepath, path.extname(filepath)).split(' ');
@@ -331,9 +335,9 @@ var rehash_files = function (files_list) {
 				}
 			}
 		});
-		if (index * 100 / hash_array.length > perc) {
+		if ((index + 1) * 100 / hash_array.length > perc) {
 			process.stdout.write('#');
-			perc++;
+			perc += perc_step;
 		}
 	});
 	process.stdout.write('] (' + ((Date.now() - timestamp) / 1000) + ' seconds)\n');
