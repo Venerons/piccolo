@@ -87,24 +87,14 @@
 			display: flex;
 			flex-flow: row nowrap;
 			align-items: center;
-			padding: 0 1rem;
+			padding: 0 0.5rem;
 			background: #222;
 			border-bottom: 2px solid dodgerblue;
 			box-shadow: 0px 3px 5px 0px black;
 			z-index: 100;
 		}
-		/*
-		.header-buttons {
-			position: fixed;
-			bottom: 0;
-			left: 0;
-		}
-		*/
 		.page {
 			flex: 1;
-		}
-		.tags-list {
-			padding: 1rem 2rem;
 		}
 		.pics-page {
 			display: flex;
@@ -127,6 +117,7 @@
 			height: 150px;
 			background: #222;
 			margin: 1px;
+			cursor: pointer;
 		}
 		@media (min-width: 320px) and (max-width: 480px) {
 			.pic {
@@ -154,6 +145,28 @@
 			align-items: stretch;
 			align-content: stretch;
 		}
+		.preview-toolbar-tags {
+			flex: 1;
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-end;
+			align-items: center;
+			align-content: center;
+			padding: 0 0.5rem;
+		}
+		.preview-tag {
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: center;
+			align-content: center;
+			border: 1px solid dodgerblue;
+			border-radius: 4px;
+			background-color: dodgerblue;
+			cursor: pointer;
+			margin: 0 0.2rem;
+			padding: 0.2rem 0.5rem;
+		}
 		.preview-container {
 			flex: 1;
 			position: relative;
@@ -166,6 +179,16 @@
 			transform: translate(-50%, -50%);
 			max-width: 100%;
 			max-height: 100%;
+		}
+		.tags-list {
+			padding: 1rem 2rem;
+		}
+		.tags-list-item {
+			margin: 0.5rem 0;
+			cursor: pointer;
+		}
+		.tags-list-item:hover {
+			color: dodgerblue;
 		}
 		.dialog {
 			position: fixed;
@@ -191,7 +214,7 @@
 			background: #333;
 		}
 		.dialog::backdrop {
-			background: rgba(0, 0, 0, 0.4);
+			background: rgba(0, 0, 0, 0.8);
 		}
 		.dialog + .backdrop {
 			position: fixed;
@@ -199,7 +222,7 @@
 			left: 0;
 			width: 100%;
 			height: 100%;
-			background: rgba(0, 0, 0, 0.4);
+			background: rgba(0, 0, 0, 0.8);
 		}
 		.dialog h3 {
 			padding: 1rem;
@@ -255,10 +278,9 @@
 		</span>
 		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
 		<div class="header-buttons">
-			<button data-action="pics" title="Pics" class="button"><i class="icon-tags"></i>&nbsp;&nbsp;Pics</button>
+			<button data-action="pics" title="Pics" class="button"><i class="icon-images"></i>&nbsp;&nbsp;Pics</button>
 			<button data-action="random" title="Random" class="button"><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
-			<button data-action="tags" title="Tags" class="button"><i class="icon-tags"></i>&nbsp;&nbsp;Tags</button>
-			<button data-action="rehash" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Rehash</button>
+			<button data-action="tags" title="Tags" class="button"><i class="icon-hashtag"></i>&nbsp;&nbsp;Tags</button>
 			<button data-action="upload" title="Upload" class="button"><i class="icon-upload"></i>&nbsp;&nbsp;Upload</button>
 		</div>		
 	</header>
@@ -273,10 +295,11 @@
 
 	<div id="page-preview" class="page preview-page" style="display: none">
 		<div class="preview-toolbar flex-row">
-			<button data-action="back" title="Back" class="button"><i class="icon-left"></i>&nbsp;&nbsp;Back</button>
-			<button data-action="star" title="Star" class="button"><i class="icon-star"></i>&nbsp;&nbsp;Star</button>
-			<button data-action="edit" title="Edit" disabled class="button"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
+			<button data-action="close" title="Close" class="button"><i class="icon-close"></i>&nbsp;&nbsp;Close</button>
+			<button data-action="favorite" title="Favorite" class="button"><i class="icon-star-empty"></i>&nbsp;&nbsp;Favorite</button>
+			<button data-action="tags" title="Tags" class="button"><i class="icon-hashtag"></i>&nbsp;&nbsp;Tags</button>
 			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
+			<span class="preview-toolbar-tags"></span>
 		</div>
 		<div class="preview-container"></div>
 	</div>
@@ -294,13 +317,10 @@
 		<ul class="tags-list"></ul>
 	</div>
 
-	<div id="page-rehash" class="page" style="display: none">
-		<div class="flex-row">
-			<button id="rehash-execute" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Start Collection Rehash</button>
-		</div>
-	</div>
-
 	<div id="page-upload" class="page" style="display: none">
+		<div class="flex-row">
+			<button id="upload-rehash" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Start Collection Rehash</button>
+		</div>
 		<h1>Work in Progress</h1>
 	</div>
 
@@ -464,7 +484,7 @@
 			}
 			var $list = $('.tags-list').empty();
 			tags.forEach(function (tag) {
-				var $li = $('<li><a>' + tag.label + ' (' + tag.count + ')</a></li>');
+				var $li = $('<li class="tags-list-item">' + tag.label + ' (' + tag.count + ')</li>');
 				$li.data('tag', tag.label);
 				$list.append($li);
 			});
@@ -527,7 +547,7 @@
 				var $pic = $(
 					'<div title="' + pic.tags.join(' ') + '" class="pic">' +
 						'<div class="pic-content"></div>' +
-						(pic.tags.indexOf('piccolostar') !== -1 ? '<i class="icon-tags" style="position: absolute; top: 0; left: 0; color: gold"></i>' : '') +
+						(pic.tags.indexOf('favorite') !== -1 ? '<i class="icon-star-full" style="position: absolute; top: 5px; left: 5px; color: orange; font-size: 1.5rem"></i>' : '') +
 					'</div>');
 				$pic.data('pic', pic);
 				observer.observe($pic[0]);
@@ -581,6 +601,18 @@
 			var $preview = $('#page-preview'),
 				$preview_container = $preview.find('.preview-container').empty();
 			$preview.data('pic', pic);
+			var $favorite_icon = $preview.find('[data-action="favorite"]').find('i');
+			if (pic.tags.indexOf('favorite') === -1) {
+				$favorite_icon.removeClass('icon-star-full').addClass('icon-star-empty').css({ color: '' });
+			} else {
+				$favorite_icon.removeClass('icon-star-empty').addClass('icon-star-full').css({ color: 'orange' });
+			}
+			var $tags_bar = $preview.find('.preview-toolbar-tags').empty();
+			pic.tags.forEach(function (tag) {
+				var $tag = $('<span data-action="tag" class="preview-tag"><i class="icon-hashtag"></i>&nbsp;' + tag + '</span>');
+				$tag.data('tag', tag);
+				$tags_bar.append($tag);
+			});
 			var element;
 			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
 				element = document.createElement('video');
@@ -702,8 +734,6 @@
 				goto_page('page-tags');
 			} else if (action === 'random') {
 				get_random_pics_list();
-			} else if (action === 'rehash') {
-				goto_page('page-rehash');
 			} else if (action === 'upload') {
 				goto_page('page-upload');
 			}
@@ -768,16 +798,20 @@
 			if (!pic) {
 				return;
 			}
-			if (action === 'back') {
+			if (action === 'close') {
 				goto_page('page-pics');
-			} else if (action === 'star') {
-				var star_index = pic.tags.indexOf('piccolostar');
+			} else if (action === 'favorite') {
+				var star_index = pic.tags.indexOf('favorite');
 				if (star_index === -1) {
-					pic.tags.push('piccolostar');
+					pic.tags.push('favorite');
 				} else {
 					pic.tags.splice(star_index, 1);
 				}
 				edit_pics([pic.path], pic.tags);
+				preview_render_pic(pic);
+			} else if (action === 'tags') {
+				// TODO
+				open_alert('TODO');
 			} else if (action === 'delete') {
 				open_dialog({
 					title: 'Delete Pic',
@@ -799,9 +833,9 @@
 						}
 					]
 				});
-			} else if (action === 'edit') {
-				// TODO
-				open_alert('TODO');
+			} else if (action === 'tag') {
+				var tag = $(this).data('tag');
+				$('#header-search').val(tag).trigger('change');
 			}
 		});
 
@@ -859,7 +893,7 @@
 			$('#header-search').val(tag).trigger('change');
 		});
 
-		$('#rehash-execute').on('click', function () {
+		$('#upload-rehash').on('click', function () {
 			var r = confirm('Execute reshash?');
 			if (r) {
 				execute_rehash();
