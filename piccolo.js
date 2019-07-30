@@ -1,5 +1,11 @@
 /*jshint esversion: 6 */
 
+// node piccolo.js <PICS_PATH> <PORT>
+
+// Examples:
+// node piccolo.js "/home/Admin/Images"
+// node piccolo.js "/home/Admin/Images" 8080
+
 const http = require('http');
 const { URL } = require('url');
 const crypto = require('crypto');
@@ -11,17 +17,12 @@ const HOSTNAME = '127.0.0.1';
 const PORT = process.argv[3] ? parseInt(process.argv[3], 10) : 3000;
 const PICS_PATH = process.argv[2];
 
-// node piccolo-server.js <PICS_PATH> <PORT>
-// Examples:
-// node piccolo-server.js "/home/Admin/Images"
-// node piccolo-server.js "/home/Admin/Images" 8080
-
 // MIME TYPE MAP
 
 var MIME_TYPE_MAP = {};
 fs.readFile(path.resolve(__dirname, 'mime-map.json'), 'UTF-8', function (error, file) {
 	if (error) {
-		console.log('Warning: mime-map.json loading failed');
+		console.error('Warning: mime-map.json loading failed');
 	} else {
 		MIME_TYPE_MAP = JSON.parse(file);
 	}
@@ -36,32 +37,58 @@ const server = http.createServer((request, response) => {
 	//console.log('request.headers', request.headers);
 	console.log(request.method, request.url);
 
+	request.on('error', (err) => {
+		console.error(err.stack);
+		http_return_error(response, 500);
+	});
+
+	response.on('error', (err) => {
+		console.error(err.stack);
+	});
+
 	const parsed_url = new URL(`${PROTOCOL}${HOSTNAME}:${PORT}${request.url}`);
 
 	if (parsed_url.pathname === '/api') {
+
 		// API
+
 		const action = parsed_url.searchParams.get('action');
 		if (!action) {
+
+			// MISSING ACTION PARAMETER
+
 			http_return_json(response, { status: 'error', error: 'INVALID_REQUEST' });
+
 		} else if (action === 'rehash') {
+
 			// REHASH - ?action=rehash
+
 			let files_list = list_files(PICS_PATH);
 			rehash_files(files_list);
 			files_list = list_files(PICS_PATH);
 			remix_files(files_list);
 			http_return_json(response, { status: 'ok' });
+
 		} else if (action === 'list_tags') {
+
 			// LIST TAGS - ?action=list_tags
+
 			let files_list = list_files(PICS_PATH);
 			http_return_json(response, { status: 'ok', tags: list_tags(files_list) });
+
 		} else if (action === 'list_pics') {
+
 			// LIST PICS - ?action=list_pics&tags=<tags>
+
 			const request_tags = parsed_url.searchParams.get('tags');
 			let files_list = list_files(PICS_PATH),
 				tags = request_tags ? JSON.parse(request_tags) : null;
 			http_return_json(response, { status: 'ok', pics: list_pics(files_list, tags) });
+
 		} else if (action === 'edit_pics') {
+
 			// EDIT PICS - ?action=edit_pics&pics=<pics>&tags=<tags>
+
 			const request_pics = parsed_url.searchParams.get('pics');
 			const request_tags = parsed_url.searchParams.get('tags');
 			if (!(request_pics && request_tags)) {
@@ -80,8 +107,11 @@ const server = http.createServer((request, response) => {
 				}
 				http_return_json(response, { status: 'ok' });
 			}
+
 		} else if (action === 'remove_pics') {
+
 			// REMOVE PICS - ?action=remove_pics&pics=<pics>
+
 			const request_pics = parsed_url.searchParams.get('pics');
 			if (!request_pics) {
 				http_return_json(response, { status: 'error', error: 'INVALID_REQUEST' });
@@ -96,14 +126,38 @@ const server = http.createServer((request, response) => {
 				}
 				http_return_json(response, { status: 'ok' });
 			}
+
 		} else if (action === 'random_pics') {
+
 			// RANDOM PICS - ?action=random_pics
-			let random_files_list = random_files(PICS_PATH);
+
+			let files_list = list_files(PICS_PATH),
+				random_files_list = random_files(files_list);
 			http_return_json(response, { status: 'ok', pics: list_pics(random_files_list) });
+
+		} else if (action === 'upload_pics') {
+
+			// UPLOAD PICS - ?action=upload_pics
+
+			let body = [];
+			request.on('data', (chunk) => {
+				body.push(chunk);
+			}).on('end', () => {
+				body = Buffer.concat(body).toString();
+				// at this point, `body` has the entire request body stored in it as a string
+				http_return_json(response, { status: 'ok' });
+			});
+
 		} else {
+
+			// INVALID ACTION
+
 			http_return_json(response, { status: 'error', error: 'INVALID_REQUEST' });
+
 		}
+
 	} else if (parsed_url.pathname === '/pic') {
+
 		// PIC
 		const request_path = parsed_url.searchParams.get('path');
 		if (!request_path) {
@@ -112,15 +166,13 @@ const server = http.createServer((request, response) => {
 			let filepath = path.normalize(PICS_PATH + path.sep + request_path);
 			http_return_file(response, filepath);
 		}
+
 	} else {
+
 		// FS SERVER
-		let filepath;
-		if (parsed_url.pathname === '/') {
-			filepath = path.resolve(__dirname, 'index.html');
-		} else {
-			filepath = path.resolve(__dirname, parsed_url.pathname.substring(1));
-		}
+		let filepath = path.resolve(__dirname, parsed_url.pathname === '/' ? 'index.html' : parsed_url.pathname.substring(1));
 		http_return_file(response, filepath);
+
 	}
 
 	console.log('\n---\n');
@@ -131,26 +183,25 @@ server.listen(PORT, HOSTNAME, () => {
 });
 
 var http_return_error = function (response, code) {
-	response.statusCode = code;
 	let message = 'Unknown Error';
 	if (code === 404) {
 		message = 'Not Found';
 	}
+	response.statusCode = code;
 	response.statusMessage = message;
 	response.setHeader('Content-Type', 'text/html');
-	response.end(`<html><head><meta charset="utf-8"><title>${code} ${message}</title></head><body><h1>Error ${code}</h1><h2>${message}</h2></body></html>\n`);
+	response.end(`<html><head><meta charset="utf-8"><title>${code} ${message}</title></head><body><h1>${code} ${message}</h1><img src="https://http.cat/${code}" alt="${code} ${message}" title="${code} ${message}"></body></html>\n`);
 };
 
 var http_return_file = function (response, filepath) {
 	process.stdout.write(`http_return_file(response, "${filepath}")...`);
-	let ext = path.extname(filepath),
-		mime = MIME_TYPE_MAP.extensions[ext];
 	fs.readFile(filepath, 'binary', function (error, file) {
 		if (error) {
 			http_return_error(response, 404);
 		} else {
 			response.statusCode = 200;
 			response.statusMessage = 'OK';
+			let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
 			if (mime) {
 				response.setHeader('Content-Type', mime[0]);
 			}
@@ -203,11 +254,10 @@ var list_files = function (tmpPath) {
 	return files_list;
 };
 
-var random_files = function (tmp_path, quantity) {
+var random_files = function (files_list, quantity) {
 	if (!quantity) {
 		quantity = 50;
 	}
-	let files_list = list_files(tmp_path);
 	if (quantity > files_list.length) {
 		quantity = files_list.length;
 	}
