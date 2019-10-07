@@ -96,9 +96,13 @@ const server = http.createServer((request, response) => {
 			} else {
 				let pics = request_pics ? JSON.parse(request_pics) : [];
 				if (pics.length > 0) {
-					let files_list = [];
-					pics.forEach(function (item) {
-						files_list.push(path.normalize(PICS_PATH + path.sep + item));
+					let complete_files_list = list_files(PICS_PATH),
+						files_list = [];
+					pics.forEach(function (pic_id) {
+						let file_path = get_pic_path(pic_id, complete_files_list);
+						if (file_path) {
+							files_list.push(file_path);
+						}
 					});
 					let tags = request_tags ? JSON.parse(request_tags) : [];
 					if (tags.length > 0) {
@@ -118,9 +122,13 @@ const server = http.createServer((request, response) => {
 			} else {
 				let pics = request_pics ? JSON.parse(request_pics) : [];
 				if (pics.length > 0) {
-					let files_list = [];
-					pics.forEach(function (item) {
-						files_list.push(path.normalize(PICS_PATH + path.sep + item));
+					let complete_files_list = list_files(PICS_PATH),
+						files_list = [];
+					pics.forEach(function (pic_id) {
+						let file_path = get_pic_path(pic_id, complete_files_list);
+						if (file_path) {
+							files_list.push(file_path);
+						}
 					});
 					remove_pics(files_list);
 				}
@@ -159,12 +167,16 @@ const server = http.createServer((request, response) => {
 	} else if (parsed_url.pathname === '/pic') {
 
 		// PIC
-		const request_path = parsed_url.searchParams.get('path');
-		if (!request_path) {
+		const request_id = parsed_url.searchParams.get('id');
+		if (!request_id) {
 			http_return_error(response, 404);
 		} else {
-			let filepath = path.normalize(PICS_PATH + path.sep + request_path);
-			http_return_file(response, filepath);
+			let filepath = get_pic_path(request_id);
+			if (!filepath) {
+				http_return_error(response, 404);
+			} else {
+				http_return_file(response, filepath);
+			}
 		}
 
 	} else {
@@ -217,6 +229,21 @@ var http_return_json = function (response, json) {
 	response.statusMessage = 'OK';
 	response.setHeader('Content-Type', 'application/json');
 	response.end(JSON.stringify(json) + '\n');
+};
+
+var get_pic_path = function (pic_id, files_list) {
+	if (!files_list) {
+		files_list = list_files(PICS_PATH);
+	}
+	for (let i = 0; i < files_list.length; ++i) {
+		let filepath = files_list[i],
+			filename = path.basename(filepath, path.extname(filepath)),
+			file_id = filename.match(/^[a-f0-9]{32}/g);
+		if (file_id && file_id[0] === pic_id) {
+			return filepath;
+		}
+	}
+	return null;
 };
 
 var list_files = function (tmpPath) {
@@ -450,7 +477,8 @@ var list_pics = function (files_list, tags) {
 		if (match) {
 			let stats = fs.statSync(filepath);
 			pics.push({
-				path: filepath.replace(PICS_PATH, ''), //path.basename(filepath),
+				id: hash,
+				//path: filepath.replace(PICS_PATH, ''), //path.basename(filepath),
 				ext: path.extname(filepath).toLowerCase().replace('.', ''),
 				tags: picTags,
 				ts: stats.birthtime.getTime()
@@ -471,8 +499,8 @@ var edit_pics = function (files_list, tags) {
 	let tags_string = tags.join(' ');
 	files_list.forEach(function (filepath) {
 		let old_filename = path.basename(filepath, path.extname(filepath)),
-			pic_id = old_filename.match(/^[a-f0-9]{32}$/g),
-			new_filename = pic_id + ' ' + tags_string;
+			pic_id = old_filename.match(/^[a-f0-9]{32}/g),
+			new_filename = (pic_id ? pic_id[0] + ' ' : '') + tags_string;
 		if (old_filename !== new_filename) {
 			console.log('\t\tRenaming ', old_filename, '-->', new_filename);
 			try {
