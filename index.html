@@ -569,7 +569,7 @@
 					context.drawImage(img, 0, 0, element.width, element.height);
 					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
 				};
-				img.src = '/pic?path=' + encodeURIComponent(pic.path);
+				img.src = '/pic?id=' + encodeURIComponent(pic.id);
 			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
 				element = document.createElement('video');
 				element.autoplay = false;
@@ -585,14 +585,14 @@
 				element.addEventListener('loadedmetadata', function () {
 					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
 				});
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				element.src = '/pic?id=' + encodeURIComponent(pic.id);
 			} else {
 				element = new Image();
 				element.setAttribute('loading', 'lazy');
 				element.onload = function () {
 					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
 				};
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				element.src = '/pic?id=' + encodeURIComponent(pic.id);
 			}
 			$pic.find('.pic-content').append(element);
 		};
@@ -624,14 +624,14 @@
 					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
 					$preview_container.append(element);
 				});
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				element.src = '/pic?id=' + encodeURIComponent(pic.id);
 			} else {
 				element = new Image();
 				element.onload = function () {
 					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
 					$preview_container.append(element);
 				};
-				element.src = '/pic?path=' + encodeURIComponent(pic.path);
+				element.src = '/pic?id=' + encodeURIComponent(pic.id);
 			}
 		};
 
@@ -679,7 +679,7 @@
 		var remove_pics = function (pics) {
 			var p = [];
 			pics.forEach(function (pic) {
-				p.push(pic.path);
+				p.push(pic.id);
 			});
 			if (p.length === 0) {
 				return;
@@ -697,9 +697,9 @@
 					pics = $('.pics-container').data('pics');
 					if (pics) {
 						for (var i = 0; i < pics.length; ++i) {
-							var pic_path = pics[i].path;
+							var pic_id = pics[i].id;
 							for (var j = 0; j < p.length; ++j) {
-								if (pic_path === p[j]) {
+								if (pic_id === p[j]) {
 									pics.splice(i, 1);
 									i--;
 									break;
@@ -807,7 +807,7 @@
 				} else {
 					pic.tags.splice(star_index, 1);
 				}
-				edit_pics([pic.path], pic.tags);
+				edit_pics([pic.id], pic.tags);
 				preview_render_pic(pic);
 			} else if (action === 'tags') {
 				// TODO
@@ -850,7 +850,7 @@
 				if (current_pic && pics_list) {
 					var previous_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
-						if (pics_list[i].path === current_pic.path) {
+						if (pics_list[i].id === current_pic.id) {
 							if (pics_list[i - 1]) {
 								previous_pic = pics_list[i - 1];
 							}
@@ -867,7 +867,7 @@
 				if (current_pic && pics_list) {
 					var next_pic;
 					for (var i = 0; i < pics_list.length; ++i) {
-						if (pics_list[i].path === current_pic.path) {
+						if (pics_list[i].id === current_pic.id) {
 							if (pics_list[i + 1]) {
 								next_pic = pics_list[i + 1];
 							}
