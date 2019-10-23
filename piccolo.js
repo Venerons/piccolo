@@ -48,6 +48,154 @@ const server = http.createServer((request, response) => {
 
 	const parsed_url = new URL(`${PROTOCOL}${HOSTNAME}:${PORT}${request.url}`);
 
+	/*
+	let tokens = parsed_url.pathname.split('/');
+
+	if (parsed_url.pathname === '' || parsed_url.pathname === '/') {
+
+		// REQUEST: /
+		// return index file
+
+		let filepath = path.resolve(__dirname, 'index.html');
+		http_return_file(response, filepath);
+
+	} else if (tokens[1] === 'tags') {
+
+		const tag_id = tokens[2];
+		if (!tag_id) {
+
+			// REQUEST: /tags
+			// list tags
+
+			let files_list = list_files(PICS_PATH);
+			http_return_json(response, { status: 'ok', tags: list_tags(files_list) });
+
+		} else {
+
+			const action = tokens[3];
+			if (!action) {
+
+				// REQUEST: /tags/<id>
+				// list pics containing this tag
+
+				// TODO
+
+			} if (action === 'remove') {
+
+				// REQUEST: /tags/<id>/remove
+				// remove tag, removing it from any pic
+
+				// TODO
+
+			} else if (action === 'edit') {
+
+				// REQUEST: /tags/<id>/edit
+				// edit (rename) tag, replacing it from any pic
+
+				// TODO
+
+			}
+		}
+
+	} else if (tokens[1] === 'pics') {
+
+		const pic_id = tokens[2];
+		if (!pic_id) {
+
+			// REQUEST: /pics
+			// list all pics
+
+			// TODO
+
+		} else if (pic_id === 'random') {
+
+			// REQUEST: /pics/random
+			// list random pics
+
+			let files_list = list_files(PICS_PATH),
+				random_files_list = random_files(files_list);
+			http_return_json(response, { status: 'ok', pics: list_pics(random_files_list) });
+
+		} else if (pic_id === 'rehash') {
+
+			// REQUEST: /pics/rehash
+			// rehash and remix all pics
+
+			let files_list = list_files(PICS_PATH);
+			rehash_files(files_list);
+			files_list = list_files(PICS_PATH);
+			remix_files(files_list);
+			http_return_json(response, { status: 'ok' });
+
+		} else if (pic_id === 'upload') {
+
+			// REQUEST: /pics/upload
+			// upload a pic
+
+			let body = [];
+			request.on('data', (chunk) => {
+				body.push(chunk);
+			}).on('end', () => {
+				body = Buffer.concat(body).toString();
+				// at this point, `body` has the entire request body stored in it as a string
+				http_return_json(response, { status: 'ok' });
+			});
+
+		} else {
+
+			const action = tokens[3];
+			if (!action) {
+
+				// REQUEST: /pics/<id>
+				// serve pic file
+
+				let filepath = get_pic_path(pic_id);
+				if (!filepath) {
+					http_return_error(response, 404);
+				} else {
+					http_return_file(response, filepath);
+				}
+
+			} else if (action === 'remove') {
+
+				// REQUEST: /pics/<id>/remove
+				// remove pic
+
+				let pics = [pic_id];
+				if (pics.length > 0) {
+					let complete_files_list = list_files(PICS_PATH),
+						files_list = [];
+					pics.forEach(function (pic_id) {
+						let file_path = get_pic_path(pic_id, complete_files_list);
+						if (file_path) {
+							files_list.push(file_path);
+						}
+					});
+					remove_pics(files_list);
+				}
+				http_return_json(response, { status: 'ok' });
+
+			} else if (action === 'edit') {
+
+				// REQUEST: /pics/<id>/edit
+				// edit pic
+
+				// TODO
+
+			}
+		}
+
+	} else {
+
+		// REQUEST: fs server
+		// serve file
+
+		let filepath = path.resolve(__dirname, parsed_url.pathname.substring(1));
+		http_return_file(response, filepath);
+
+	}
+	*/
+
 	if (parsed_url.pathname === '/api') {
 
 		// API
@@ -196,8 +344,36 @@ server.listen(PORT, HOSTNAME, () => {
 
 var http_return_error = function (response, code) {
 	let message = 'Unknown Error';
-	if (code === 404) {
+	if (code === 200) {
+		message = 'OK';
+	} else if (code === 206) {
+		message = 'Partial Content';
+	} else if (code === 301) {
+		message = 'Moved Permanently';
+	} else if (code === 302) {
+		message = 'Found';
+	} else if (code === 304) {
+		message = 'Not Modified';
+	} else if (code === 400) {
+		message = 'Bad Request';
+	} else if (code === 403) {
+		message = 'Forbidden';
+	} else if (code === 404) {
 		message = 'Not Found';
+	} else if (code === 405) {
+		message = 'Method Not Allowed';
+	} else if (code === 408) {
+		message = 'Request Time-out';
+	} else if (code === 411) {
+		message = 'Length Required';
+	} else if (code === 412) {
+		message = 'Precondition Failed';
+	} else if (code === 416) {
+		message = 'Requested range not satisfiable';
+	} else if (code === 500) {
+		message = 'Internal Server Error';
+	} else if (code === 503) {
+		message = 'Server Unavailable';
 	}
 	response.statusCode = code;
 	response.statusMessage = message;
