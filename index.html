@@ -9,125 +9,313 @@
 	<link rel="stylesheet" href="icons.css">
 
 	<style type="text/css">
-		*, *::before, *::after {
+		*,
+		*::before,
+		*::after {
 			box-sizing: border-box;
 			margin: 0;
 			padding: 0;
 		}
+
+		:root,
 		html,
 		body {
 			width: 100%;
 			height: 100%;
-			font: 400 normal 16px/1.2 'Open Sans', sans-serif;
+			background-color: #222;
 			color: whitesmoke;
-			background: #333;
+			font: 400 normal 16px/1.2 Lato, 'Helvetica Neue', Arial, Helvetica, sans-serif;
+			-ms-text-size-adjust: 100%;
+			-webkit-text-size-adjust: 100%;
+			-moz-text-size-adjust: auto;
+			-moz-text-size-adjust: 100%;
 		}
+
 		:disabled {
-			opacity: 0.5;
+			cursor: default;
+			opacity: 0.45;
 			pointer-events: none;
 		}
-		input[type=text],
-		input[type=search] {
-			padding: 0.5rem;
-			font: inherit;
-			color: black;
-			background: whitesmoke;
-			border: 1px solid dodgerblue;
+
+		[hidden] {
+			display: none !important;
 		}
-		input[type=search] {
-			min-height: 3rem;
-			font: inherit;
-			color: whitesmoke;
-			background: transparent;
-			border: none;
+
+		.h1,
+		.h2,
+		.h3,
+		.h4,
+		.h5,
+		.h6 {
+			margin: 1.2rem 0 0.6rem 0;
+			font-weight: bold;
 		}
-		input[type=checkbox] {
-			cursor: pointer;
+
+		.h1:first-child,
+		.h2:first-child,
+		.h3:first-child,
+		.h4:first-child,
+		.h5:first-child,
+		.h6:first-child {
+			margin-top: 0;
 		}
+
+		.h1 {
+			font-size: 2rem;
+		}
+		.h2 {
+			font-size: 1.71rem;
+		}
+		.h3 {
+			font-size: 1.28rem;
+		}
+		.h4 {
+			font-size: 1.07rem;
+		}
+		.h5 {
+			font-size: 1rem;
+		}
+		.h6 {
+			font-size: 0.8rem;
+		}
+
+		.p {
+			display: block;
+			margin: 0.6rem 0;
+		}
+
 		.button {
-			min-width: 57px;
-			min-height: 3rem;
-			margin: 0.5rem;
-			padding: 0.5rem 1rem;
-			font: inherit;
-			color: dodgerblue;
-			background: transparent;
+			will-change: '';
 			cursor: pointer;
+			position: relative;
+			min-height: 1rem;
+			display: inline-block;
+			margin: 0 0.25rem 0 0;
+			padding: 0.78571429rem 1.5rem 0.78571429rem;
+			background-color: #1e90ff;
+			vertical-align: baseline;
+			font: inherit;
+			font-weight: bold;
+			text-align: center;
+			text-overflow: ellipsis;
+			text-transform: uppercase;
+			color: whitesmoke;
+			user-select: none;
+			outline: 0;
 			border: none;
-			border-radius: 4px;
+			border-radius: 0.28571429rem;
+			transition:
+				opacity 0.1s ease,
+				background-color 0.1s ease,
+				color 0.1s ease,
+				background 0.1s ease;
 		}
+
+		.button::-moz-focus-inner {
+			border: none;
+		}
+
 		.button:hover,
 		.button:focus {
-			color: whitesmoke;
-			background: dodgerblue;
+			background-color: #0483ff;
+			color: #e8e8e8;
 		}
+
 		.button:active {
-			color: dodgerblue;
-			background: whitesmoke;
+			background-color: #0077ea;
+			color: #dcdcdc;
 		}
-		.button.button-active {
-			border: 2px solid dodgerblue;
+
+		.button:not(.button-icon) > i:first-child {
+			margin-right: 0.6rem;
 		}
-		a {
-			color: dodgerblue;
+
+		.button.button-header {
+			background-color: transparent;
+			text-transform: none;
+			color: rgba(255, 255, 255, 0.5);
+		}
+
+		.button.button-header:hover,
+		.button.button-header:focus {
+			color: #0483ff;
+		}
+
+		.button.button-header:active {
+			color: #0077ea;
+		}
+
+		.button.button-header.button-header-active {
+			color: whitesmoke;
+		}
+
+		.button.button-floating {
+			position: absolute;
+			bottom: 1rem;
+			right: 1rem;
+			box-shadow:
+				0 2px 2px 0 rgba(0, 0, 0, 0.14),
+				0 1px 5px 0 rgba(0, 0, 0, 0.12),
+				0 3px 1px -2px rgba(0, 0, 0, 0.2);
+		}
+
+		.link {
 			cursor: pointer;
+			text-decoration: none;
+			color: whitesmoke;
 		}
-		body {
-			display: flex;
-			flex-flow: column nowrap;
+
+		.link:hover {
+			color: #0483ff;
 		}
-		.flex-row{
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: flex-start;
-			align-items: center;
-			align-content: center;
+
+		.link:focus {
+			outline: 0;
+			/*border: 1px solid var(--color-primary);*/
+			box-shadow:
+				0 0 0 0.2rem #0483ff,
+				0 0 0 0.4rem #0483ff;
 		}
+
+		.link:active {
+			color: #0077ea;
+		}
+
+		.input {
+			position: relative;
+			padding: 0.67857143rem 1rem;
+			background-color: #404040;
+			font: inherit;
+			color: whitesmoke;
+			border: 1px solid #595959;
+			/*border-radius: 0.28571429rem;*/
+			outline: 0;
+			transition: border-color 0.1s ease;
+		}
+
+		.input:focus {
+			border-color: #1e90ff;
+			outline: 0;
+		}
+
+		.input:invalid {
+			border-color: #de6262;
+			box-shadow: none;
+		}
+
+		.input[type="color"] {
+			min-height: 2.68125rem;
+		}
+
+		.select {
+			position: relative;
+			cursor: pointer;
+			padding: 0.67857143rem 1rem;
+			background-color: #404040;
+			font: inherit;
+			text-transform: none;
+			text-overflow: ellipsis;
+			color: whitesmoke;
+			border: 1px solid #595959;
+			/*border-radius: 0.28571429rem;*/
+			outline: 0;
+			transition: border-color 0.1s ease;
+
+			-moz-appearance: none;
+			-webkit-appearance: none;
+			appearance: none;
+			background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23004a8e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+			background-repeat: no-repeat, repeat;
+			background-position: right 0.7rem top 50%, 0 0;
+			background-size: 0.65rem auto, 100%;
+		}
+
+		.select:-moz-focusring {
+			color: transparent;
+			text-shadow: 0 0 0 #000;
+		}
+
+		.select:focus {
+			border-color: #1e90ff;
+			outline: 0;
+		}
+
+		.select optgroup {
+			background-color: #1e90ff;
+			font-weight: bold;
+			color: whitesmoke;
+		}
+
+		.select option {
+			cursor: pointer;
+			background-color: #222;
+			color: whitesmoke;
+		}
+
+		.select option:hover:not(:disabled) {
+			color: inherit;
+		}
+
+		.select option:disabled {
+			cursor: default;
+			color: rgb(109, 109, 109);
+		}
+
 		.header {
+			position: sticky;
 			display: flex;
 			flex-flow: row nowrap;
 			align-items: center;
-			padding: 0 0.5rem;
-			background: #222;
-			border-bottom: 2px solid dodgerblue;
-			box-shadow: 0px 3px 5px 0px black;
+			padding: 0.5rem;
 			z-index: 100;
 		}
-		.page {
+
+		.header-logo {
+			font-weight: bold;
+		}
+
+		.header-pages {
 			flex: 1;
+			text-align: center;
 		}
-		.pics-page {
-			display: flex;
-			flex-flow: column nowrap;
-			justify-content: stretch;
-			align-items: stretch;
-			align-content: stretch;
+
+		.header-toolbar {
+			/* TODO */
 		}
+
+		.page {
+			/* TODO */
+		}
+
 		.pics-container {
-			overflow: auto;
+			/*overflow: auto;*/
 			display: flex;
 			flex-flow: row wrap;
 			align-content: flex-start;
 			align-items: flex-start;
 			justify-content: flex-start;
 		}
+
 		.pic {
 			position: relative;
 			width: 150px;
 			height: 150px;
-			background: #222;
+			background: #333;
 			margin: 1px;
 			cursor: pointer;
 		}
+
 		@media (min-width: 320px) and (max-width: 480px) {
 			.pic {
 				width: 100px;
 				height: 100px;
 			}
 		}
+
 		.pic.pic-selected {
 			border: 2px solid dodgerblue;
 		}
+
 		.pic-content > img,
 		.pic-content > canvas,
 		.pic-content > video {
@@ -138,39 +326,21 @@
 			max-width: 100%;
 			max-height: 100%;
 		}
-		.preview-page {
+
+		.page-preview {
+			height: calc(100vh - 60px);
 			display: flex;
-			flex-flow: column nowrap;
+			flex-flow: row nowrap;
 			justify-content: stretch;
 			align-items: stretch;
 			align-content: stretch;
 		}
-		.preview-toolbar-tags {
-			flex: 1;
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: flex-end;
-			align-items: center;
-			align-content: center;
-			padding: 0 0.5rem;
-		}
-		.preview-tag {
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: flex-start;
-			align-items: center;
-			align-content: center;
-			border: 1px solid dodgerblue;
-			border-radius: 4px;
-			background-color: dodgerblue;
-			cursor: pointer;
-			margin: 0 0.2rem;
-			padding: 0.2rem 0.5rem;
-		}
+
 		.preview-container {
-			flex: 1;
 			position: relative;
+			flex: 1;
 		}
+
 		.preview-container > img,
 		.preview-container > video {
 			position: absolute;
@@ -180,6 +350,29 @@
 			max-width: 100%;
 			max-height: 100%;
 		}
+
+		.preview-toolbar {
+			padding: 1rem;
+			background-color: #333;
+			width: 300px;
+		}
+
+		.preview-toolbar-actions {
+			/* TODO */
+		}
+
+		.preview-toolbar-tags {
+			margin-top: 1.2rem;
+		}
+
+		.preview-toolbar-tags > .link {
+			margin: 0.5rem 0.5rem 0.5rem 0;
+		}
+
+
+
+
+
 		.tags-list {
 			padding: 1rem 2rem;
 		}
@@ -272,40 +465,51 @@
 <body>
 	<datalist id="datalist-tags"></datalist>
 
-	<header class="header">
-		<span style="font-weight: bold">
-			<span style="color: orange">Pic</span><span style="color: dodgerblue">colo</span>
-		</span>
-		<input id="header-search" type="search" list="datalist-tags" placeholder="Tag..." style="flex: 1">
-		<div class="header-buttons">
-			<button data-action="pics" title="Pics" class="button"><i class="icon-images"></i>&nbsp;&nbsp;Pics</button>
-			<button data-action="random" title="Random" class="button"><i class="icon-random"></i>&nbsp;&nbsp;Random</button>
-			<button data-action="tags" title="Tags" class="button"><i class="icon-hashtag"></i>&nbsp;&nbsp;Tags</button>
-			<button data-action="upload" title="Upload" class="button"><i class="icon-upload"></i>&nbsp;&nbsp;Upload</button>
-		</div>		
-	</header>
+	<div class="header">
+		<div class="header-logo"><span style="color: orange">Pic</span><span style="color: dodgerblue">colo</span></div>
+		<div class="header-pages">
+			<button data-action="pics" title="Pics" class="button button-header">Home</button>
+			<button data-action="favorites" title="Favorites" class="button button-header">Favorites</button>
+			<button data-action="random" title="Random" class="button button-header">Random</button>
+			<button data-action="untagged" title="Untagged" class="button button-header">Untagged</button>
+			<button data-action="tags" title="Tags" class="button button-header">Tags</button>
+		</div>
+		<div class="header-toolbar">
+			<button data-action="upload" title="Upload" class="button button-icon button-header"><i class="icon-upload"></i></button>
+			<button data-action="rehash" title="Rehash" class="button button-icon button-header"><i class="icon-refresh"></i></button>
+		</div>
+	</div>
 
-	<div id="page-pics" class="page pics-page">
-		<div class="pics-toolbar flex-row">
-			<button data-action="edit" title="Edit" class="button"><i class="icon-edit"></i>&nbsp;&nbsp;Edit</button>
-			<button data-action="delete" title="Upload" class="button" disabled><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
+	<div id="page-pics" class="page">
+		<div style="width: 960px; max-width: 95%; margin: 1.2rem auto">
+			<input id="pics-search" type="search" list="datalist-tags" placeholder="Search..." class="input" style="width: 100%">
+		</div>
+		<div class="pics-toolbar">
+			<button data-action="edit" title="Edit" class="button"><i class="icon-edit"></i>Edit</button>
+			<button data-action="delete" title="Upload" class="button" disabled><i class="icon-delete"></i>Delete</button>
 		</div>
 		<div class="pics-container"></div>
 	</div>
 
-	<div id="page-preview" class="page preview-page" style="display: none">
-		<div class="preview-toolbar flex-row">
-			<button data-action="close" title="Close" class="button"><i class="icon-close"></i>&nbsp;&nbsp;Close</button>
-			<button data-action="favorite" title="Favorite" class="button"><i class="icon-star-empty"></i>&nbsp;&nbsp;Favorite</button>
-			<button data-action="tags" title="Tags" class="button"><i class="icon-hashtag"></i>&nbsp;&nbsp;Tags</button>
-			<button data-action="delete" title="Delete" class="button"><i class="icon-delete"></i>&nbsp;&nbsp;Delete</button>
-			<span class="preview-toolbar-tags"></span>
-		</div>
+	<div id="page-preview" class="page page-preview" style="display: none">
 		<div class="preview-container"></div>
+		<div class="preview-toolbar">
+			<div class="preview-toolbar-actions">
+				<button data-action="favorite" title="Favorite" class="button button-icon button-header"><i class="icon-star-empty"></i></button>
+				<button data-action="delete" title="Delete" class="button button-icon button-header"><i class="icon-delete"></i></button>
+				<button data-action="close" title="Close" class="button button-icon button-header"><i class="icon-close"></i></button>
+			</div>
+			<div>
+				<textarea id="preview-tags" rows="10" class="input" style="width: 100%"></textarea>
+			</div>
+		</div>
 	</div>
 
 	<div id="page-tags" class="page" style="display: none">
-		<div class="flex-row">
+		<div style="width: 960px; max-width: 95%; margin: 1.2rem auto">
+			<input id="tags-search" type="search" placeholder="Search..." class="input" style="width: 100%">
+		</div>
+		<div>
 			<span>Sorting</span>
 			<select id="tags-sorting" style="margin: 1rem">
 				<option value="alpha">Alphabetic Ascendant</option>
@@ -315,13 +519,6 @@
 			</select>
 		</div>
 		<ul class="tags-list"></ul>
-	</div>
-
-	<div id="page-upload" class="page" style="display: none">
-		<div class="flex-row">
-			<button id="upload-rehash" title="Rehash" class="button"><i class="icon-refresh"></i>&nbsp;&nbsp;Start Collection Rehash</button>
-		</div>
-		<h1>Work in Progress</h1>
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -536,6 +733,29 @@
 			});
 		};
 
+		var get_untagged_pics_list = function () {
+			var $controls = $('.header-buttons').find('input, button');
+			$controls.prop('disabled', true);
+			return $.ajax({
+				type: 'GET',
+				url: '/api?action=untagged_pics',
+				dataType: 'json'
+			}).fail(function () {
+				console.error('get_untagged_pics_list', 'fail');
+				$controls.prop('disabled', false);
+				open_alert('Error', 'Request Failed.');
+			}).done(function (data) {
+				$controls.prop('disabled', false);
+				if (data.status !== 'ok') {
+					console.error('get_untagged_pics_list', data.status, data.error);
+					open_alert('Error', 'status = ' + data.status + ', error = ' + data.error);
+				} else {
+					render_pics_list(data.pics);
+					goto_page('page-pics');
+				}
+			});
+		};
+
 		var render_pics_list = function (pics) {
 			var $container = $('.pics-container').empty();
 			if (pics) {
@@ -607,12 +827,7 @@
 			} else {
 				$favorite_icon.removeClass('icon-star-empty').addClass('icon-star-full').css({ color: 'orange' });
 			}
-			var $tags_bar = $preview.find('.preview-toolbar-tags').empty();
-			pic.tags.forEach(function (tag) {
-				var $tag = $('<span data-action="tag" class="preview-tag"><i class="icon-hashtag"></i>&nbsp;' + tag + '</span>');
-				$tag.data('tag', tag);
-				$tags_bar.append($tag);
-			});
+			$preview.find('#preview-tags').val(pic.tags.join('\n'));
 			var element;
 			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
 				element = document.createElement('video');
@@ -713,7 +928,29 @@
 			});
 		};
 
-		$('#header-search').on('change', function () {
+		$('.header').on('click', '[data-action]', function () {
+			var action = $(this).data('action');
+			if (action === 'pics') {
+				goto_page('page-pics');
+			} else if (action === 'favorites') {
+				get_pics_list(['favorite']);
+			} else if (action === 'random') {
+				get_random_pics_list();
+			} else if (action === 'untagged') {
+				get_untagged_pics_list();
+			} else if (action === 'tags') {
+				goto_page('page-tags');
+			} else if (action === 'upload') {
+				// TODO
+			} else if (action === 'rehash') {
+				var r = confirm('Execute reshash?');
+				if (r) {
+					execute_rehash();
+				}
+			}
+		});
+
+		$('#pics-search').on('change', function () {
 			var pattern = $(this).val().trim();
 			if (pattern === '') {
 				return;
@@ -723,19 +960,6 @@
 			});
 			if (tags.length !== 0) {
 				get_pics_list(tags);
-			}
-		});
-
-		$('.header-buttons').on('click', '[data-action]', function () {
-			var action = $(this).data('action');
-			if (action === 'pics') {
-				goto_page('page-pics');
-			} else if (action === 'tags') {
-				goto_page('page-tags');
-			} else if (action === 'random') {
-				get_random_pics_list();
-			} else if (action === 'upload') {
-				goto_page('page-upload');
 			}
 		});
 
@@ -809,9 +1033,6 @@
 				}
 				edit_pics([pic.id], pic.tags);
 				preview_render_pic(pic);
-			} else if (action === 'tags') {
-				// TODO
-				open_alert('TODO');
 			} else if (action === 'delete') {
 				open_dialog({
 					title: 'Delete Pic',
@@ -837,6 +1058,16 @@
 				var tag = $(this).data('tag');
 				$('#header-search').val(tag).trigger('change');
 			}
+		});
+
+		$('#preview-tags').on('change', function () {
+			var pic = $('#page-preview').data('pic');
+			pic.tags = [];
+			$(this).val().split(/\r\n|\r|\n/).forEach(function (tag) {
+				pic.tags.push(tag.trim());
+			});
+			edit_pics([pic.id], pic.tags);
+			preview_render_pic(pic);
 		});
 
 		document.addEventListener('keyup', function (event) {
@@ -891,13 +1122,6 @@
 		$('.tags-list').on('click', 'li', function () {
 			var tag = $(this).data('tag');
 			$('#header-search').val(tag).trigger('change');
-		});
-
-		$('#upload-rehash').on('click', function () {
-			var r = confirm('Execute reshash?');
-			if (r) {
-				execute_rehash();
-			}
 		});
 
 		get_tags_list();
