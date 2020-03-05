@@ -291,6 +291,14 @@ const server = http.createServer((request, response) => {
 				random_files_list = random_files(files_list);
 			http_return_json(response, { status: 'ok', pics: list_pics(random_files_list) });
 
+		} else if (action === 'untagged_pics') {
+
+			// UNTAGGED PICS - ?action=untagged_pics
+
+			let files_list = list_files(PICS_PATH),
+				untagged_files_list = untagged_files(files_list);
+			http_return_json(response, { status: 'ok', pics: list_pics(untagged_files_list) });
+
 		} else if (action === 'upload_pics') {
 
 			// UPLOAD PICS - ?action=upload_pics
@@ -414,8 +422,8 @@ var get_pic_path = function (pic_id, files_list) {
 	for (let i = 0; i < files_list.length; ++i) {
 		let filepath = files_list[i],
 			filename = path.basename(filepath, path.extname(filepath)),
-			file_id = filename.match(/^[a-f0-9]{32}/g);
-		if (file_id && file_id[0] === pic_id) {
+			file_id = filename.match(/^[a-f0-9]{32}/g) ? filename.match(/^[a-f0-9]{32}/g)[0] : null;
+		if (file_id === pic_id) {
 			return filepath;
 		}
 	}
@@ -474,6 +482,19 @@ var random_files = function (files_list, quantity) {
 		}
 	}
 	return random_files_list;
+};
+
+var untagged_files = function (files_list) {
+	let untagged_files_list = [];
+	files_list.forEach(function (filepath) {
+		let filename = path.basename(filepath, path.extname(filepath)),
+			pic_id = filename.match(/^[a-f0-9]{32}/g) ? filename.match(/^[a-f0-9]{32}/g)[0] : null,
+			pic_tags = filename.split(' ');
+		if (pic_tags.length === 1 && pic_tags[0] === pic_id) {
+			untagged_files_list.push(filepath);
+		}
+	});
+	return untagged_files_list;
 };
 
 var tags_sorting = function (a, b) {
@@ -604,28 +625,30 @@ var rehash_files = function (files_list) {
 
 var list_tags = function (files_list) {
 	process.stdout.write('list_tags...');
-	let labels = [],
-		count = [];
-	files_list.forEach(function (filepath, index) {
-		let picTags = path.basename(filepath, path.extname(filepath)).split(' '),
-			ext = path.extname(filepath).toLowerCase().replace('.', '');
-		picTags.splice(0, 1);
-		picTags.push(ext);
-		picTags.forEach(function (tag) {
-			let index = labels.indexOf(tag);
-			if (index === -1) {
-				labels.push(tag);
-				count.push(1);
-			} else {
-				count[index]++;
+	let map = {};
+	files_list.forEach(function (filepath) {
+		let filename = path.basename(filepath, path.extname(filepath)),
+			pic_id = filename.match(/^[a-f0-9]{32}/g) ? filename.match(/^[a-f0-9]{32}/g)[0] : null,
+			pic_tags = filename.split(' ');
+		pic_tags.forEach(function (tag) {
+			if (tag !== pic_id) {
+				if (map[tag]) {
+					map[tag].count++;
+				} else {
+					map[tag] = {
+						count: 1,
+						cover: pic_id
+					};
+				}
 			}
 		});
 	});
 	let tags = [];
-	labels.forEach(function (tag, index) {
+	Object.keys(map).forEach(function (tag) {
 		tags.push({
 			label: tag,
-			count: count[index]
+			count: map[tag].count,
+			cover: map[tag].cover
 		});
 	});
 	tags.sort(function (a, b) {
@@ -639,24 +662,23 @@ var list_pics = function (files_list, tags) {
 	process.stdout.write('list_pics...');
 	let pics = [];
 	files_list.forEach(function (filepath, index) {
-		let picTags = path.basename(filepath, path.extname(filepath)).split(' '),
-			ext = path.extname(filepath).toLowerCase().replace('.', ''),
-			hash = picTags[0];
-		picTags.splice(0, 1);
-		picTags.push(ext);
+		let filename = path.basename(filepath, path.extname(filepath)),
+			pic_id = filename.match(/^[a-f0-9]{32}/g) ? filename.match(/^[a-f0-9]{32}/g)[0] : null,
+			pic_tags = filename.split(' ');
+		pic_tags.splice(0, 1);
 		let match = true;
 		if (tags) {
 			tags.forEach(function (tag) {
-				match = match && picTags.includes(tag);
+				match = match && pic_tags.includes(tag);
 			});
 		}
 		if (match) {
 			let stats = fs.statSync(filepath);
 			pics.push({
-				id: hash,
+				id: pic_id,
 				//path: filepath.replace(PICS_PATH, ''), //path.basename(filepath),
 				ext: path.extname(filepath).toLowerCase().replace('.', ''),
-				tags: picTags,
+				tags: pic_tags,
 				ts: stats.birthtime.getTime()
 			});
 		}
@@ -670,13 +692,13 @@ var list_pics = function (files_list, tags) {
 
 var edit_pics = function (files_list, tags) {
 	console.log('edit_pics...');
+	console.log('\tEditing files', files_list);
 	console.log('\tEditing tags', tags);
-	tags.sort(tags_sorting);
-	let tags_string = tags.join(' ');
+	let tags_string = tags.sort(tags_sorting).join(' ');
 	files_list.forEach(function (filepath) {
 		let old_filename = path.basename(filepath, path.extname(filepath)),
-			pic_id = old_filename.match(/^[a-f0-9]{32}/g),
-			new_filename = (pic_id ? pic_id[0] + ' ' : '') + tags_string;
+			pic_id = old_filename.match(/^[a-f0-9]{32}/g) ? old_filename.match(/^[a-f0-9]{32}/g)[0] : null,
+			new_filename = `${pic_id ? pic_id : ''}${tags_string.length > 0 ? ` ${tags_string}` : ''}`;
 		if (old_filename !== new_filename) {
 			console.log('\t\tRenaming ', old_filename, '-->', new_filename);
 			try {
