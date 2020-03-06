@@ -18,7 +18,7 @@ const PICS_PATH = process.argv[2];
 // MIME TYPE MAP
 
 var MIME_TYPE_MAP = {};
-fs.readFile(path.resolve(__dirname, 'mime-map.json'), 'UTF-8', function (error, file) {
+fs.readFile(path.resolve(__dirname, 'ui/mime-map.json'), 'UTF-8', function (error, file) {
 	if (error) {
 		console.error('Warning: mime-map.json loading failed');
 	} else {
@@ -53,7 +53,7 @@ const server = http.createServer((request, response) => {
 		// REQUEST: /
 		// return index file
 
-		let filepath = path.resolve(__dirname, 'index.html');
+		let filepath = path.resolve(__dirname, 'ui/index.html');
 		http_return_file(response, filepath);
 
 	} else if (tokens[1] === 'tags') {
@@ -235,7 +235,7 @@ const server = http.createServer((request, response) => {
 		// REQUEST: fs server
 		// serve file
 
-		let filepath = path.resolve(__dirname, parsed_url.pathname.substring(1));
+		let filepath = path.resolve(__dirname, `ui/${parsed_url.pathname.substring(1)}`);
 		http_return_file(response, filepath);
 
 	}
@@ -457,8 +457,8 @@ var files_rehash = function (files_list) {
 				}
 				if (new_filename !== path.basename(filepath, path.extname(filepath))) {
 					fs.renameSync(path.normalize(filepath), path.normalize(`${path.dirname(filepath)}${path.sep}${new_filename}${path.extname(filepath).toLowerCase()}`));
+					count_rehashed++;
 				}
-				count_rehashed++;
 			} else {
 				try {
 					fs.unlinkSync(filepath);
