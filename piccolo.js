@@ -54,7 +54,7 @@ const server = http.createServer((request, response) => {
 		// return index file
 
 		let filepath = path.resolve(__dirname, 'ui/index.html');
-		http_return_file(response, filepath);
+		http_return_file(request, response, filepath);
 
 	} else if (tokens[1] === 'tags') {
 
@@ -204,7 +204,7 @@ const server = http.createServer((request, response) => {
 				if (!filepath) {
 					http_return_error(response, 404);
 				} else {
-					http_return_file(response, filepath);
+					http_return_file(request, response, filepath);
 				}
 
 			} else if (action === 'remove') {
@@ -236,7 +236,7 @@ const server = http.createServer((request, response) => {
 		// serve file
 
 		let filepath = path.resolve(__dirname, `ui/${parsed_url.pathname.substring(1)}`);
-		http_return_file(response, filepath);
+		http_return_file(request, response, filepath);
 
 	}
 
@@ -297,22 +297,44 @@ var http_return_error = function (response, code) {
 	response.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${code} ${message}</title></head><body><h1>${code} ${message}</h1><img src="https://http.cat/${code}" alt="${code} ${message}" title="${code} ${message}"></body></html>\n`);
 };
 
-var http_return_file = function (response, filepath) {
+var http_return_file = function (request, response, filepath) {
 	console.log(`http_return_file: ${filepath}`);
-	fs.readFile(filepath, 'binary', function (error, file) {
-		if (error) {
-			http_return_error(response, 404);
-		} else {
-			response.statusCode = 200;
-			response.statusMessage = 'OK';
-			let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
-			if (mime) {
-				response.setHeader('Content-Type', mime[0]);
-			}
-			response.write(file, 'binary');
-			response.end();
+	const stat = fs.statSync(filepath);
+	const filesize = stat.size;
+	const range = request.headers.range;
+	if (range) {
+		const parts = range.replace(/bytes=/, '').split('-');
+		const start = parseInt(parts[0], 10);
+		const end = parts[1] ? parseInt(parts[1], 10) : filesize - 1;
+		const chunksize = (end - start) + 1;
+		response.statusCode = 206;
+		response.statusMessage = 'Partial Content';
+		let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
+		if (mime) {
+			response.setHeader('Content-Type', mime[0]);
 		}
-	});
+		response.setHeader('Content-Range', `bytes ${start}-${end}/${filesize}`);
+		response.setHeader('Accept-Ranges', 'bytes');
+		response.setHeader('Content-Length', chunksize);
+		const stream = fs.createReadStream(filepath, { start: start, end: end });
+		stream.pipe(response);
+		stream.on('end', function () {
+			response.end();
+		});
+	} else {
+		response.statusCode = 200;
+		response.statusMessage = 'OK';
+		let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
+		if (mime) {
+			response.setHeader('Content-Type', mime[0]);
+		}
+		response.setHeader('Content-Length', filesize);
+		const stream = fs.createReadStream(filepath);
+		stream.pipe(response);
+		stream.on('end', function () {
+			response.end();
+		});
+	}
 };
 
 var http_return_json = function (response, json) {
@@ -380,7 +402,6 @@ var list_files = function (tmp_path) {
 		tmp_path = path.resolve(tmp_path);
 	}
 	try {
-		fs.accessSync(tmp_path, fs.constants.F_OK);
 		let stats = fs.statSync(tmp_path);
 		if (stats.isDirectory()) {
 			let array = fs.readdirSync(tmp_path);
@@ -392,7 +413,6 @@ var list_files = function (tmp_path) {
 					let f = path.normalize(tmp_path + path.sep + filename),
 						stats = fs.statSync(f);
 					if (stats.isFile()) {
-						fs.accessSync(f, fs.constants.R_OK | fs.constants.W_OK);
 						files_list.push(f);
 					} else if (stats.isDirectory()) {
 						files_list = files_list.concat(list_files(f));
@@ -400,10 +420,7 @@ var list_files = function (tmp_path) {
 				} catch (e) {}
 			});
 		} else if (stats.isFile()) {
-			try {
-				fs.accessSync(tmp_path, fs.constants.R_OK | fs.constants.W_OK);
-				files_list.push(tmp_path);
-			} catch (e) {}
+			files_list.push(tmp_path);
 		}
 	} catch (e) {}
 	return files_list;
@@ -413,7 +430,7 @@ var files_rehash = function (files_list) {
 	console.log('files_rehash...');
 	console.log('\tSearching duplicates...');
 	let timestamp = Date.now();
-	process.stdout.write('\t----/---- (---%)');
+	process.stdout.write('\tProcessing...');
 	let hash_map = Object.create(null);
 	let count = 0;
 	files_list.forEach(function (filepath, index) {
@@ -426,7 +443,7 @@ var files_rehash = function (files_list) {
 		}
 		process.stdout.clearLine();
 		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${(index + 1).toString().padStart(4, ' ')}/${files_list.length.toString().padStart(4, ' ')} (${((index + 1) * 100 / files_list.length).toString().padStart(3, ' ')}%)`);
+		process.stdout.write(`\t${index + 1}/${files_list.length} (${Math.floor((index + 1) * 100 / files_list.length)}%)`);
 	});
 	console.log(`\n\t${count} duplicated files has been found in ${(Date.now() - timestamp) / 1000} seconds.`);
 	console.log('\tRehashing files...');
@@ -435,7 +452,7 @@ var files_rehash = function (files_list) {
 		count_duplicate_removed = 0,
 		issues = [],
 		hash_array = Object.keys(hash_map);
-	process.stdout.write('\t----/---- (---%)');
+	process.stdout.write('\tProcessing...');
 	hash_array.forEach(function (digest, index) {
 		let tags = [];
 		hash_map[digest].forEach(function (filepath) {
@@ -471,7 +488,7 @@ var files_rehash = function (files_list) {
 		});
 		process.stdout.clearLine();
 		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${(index + 1).toString().padStart(4, ' ')}/${hash_array.length.toString().padStart(4, ' ')} (${((index + 1) * 100 / hash_array.length).toString().padStart(3, ' ')}%)`);
+		process.stdout.write(`\t${index + 1}/${hash_array.length} (${Math.floor((index + 1) * 100 / hash_array.length)}%)`);
 	});
 	console.log(`\n\tRehashing completed in ${(Date.now() - timestamp) / 1000} seconds.`);
 	issues.forEach(function (issue) {
@@ -485,7 +502,7 @@ var files_rehash = function (files_list) {
 var files_remix = function (files_list) {
 	console.log('files_remix...');
 	let timestamp = Date.now();
-	process.stdout.write('\t----/---- (---%)');
+	process.stdout.write('\tProcessing...');
 	files_list.forEach(function (filepath, index) {
 		let ext = path.extname(filepath).substring(1).toLowerCase(),
 			basename = path.basename(filepath),
@@ -500,7 +517,7 @@ var files_remix = function (files_list) {
 		}
 		process.stdout.clearLine();
 		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${(index + 1).toString().padStart(4, ' ')}/${files_list.length.toString().padStart(4, ' ')} (${((index + 1) * 100 / files_list.length).toString().padStart(3, ' ')}%)`);
+		process.stdout.write(`\t${index + 1}/${files_list.length} (${Math.floor((index + 1) * 100 / files_list.length)}%)`);
 	});
 	console.log(`\tRemixing completed in ${(Date.now() - timestamp) / 1000} seconds.`);
 	console.log('DONE.');
