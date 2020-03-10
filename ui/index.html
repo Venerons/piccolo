@@ -238,7 +238,7 @@
 			-moz-appearance: none;
 			-webkit-appearance: none;
 			appearance: none;
-			background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23004a8e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+			background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23f5f5f5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
 			background-repeat: no-repeat, repeat;
 			background-position: right 0.7rem top 50%, 0 0;
 			background-size: 0.65rem auto, 100%;
@@ -319,6 +319,20 @@
 			background: #404040;
 			margin: 1px;
 			cursor: pointer;
+			overflow: hidden;
+		}
+
+		.pic-favorite {
+			position: absolute;
+			top: 12.5px;
+			left: -25px;
+			transform: rotate(-45deg);
+			width: 100px;
+			padding: 0.25rem;
+			font-size: 0.8rem;
+			text-align: center;
+			background-color: #e82;
+			z-index: 1;
 		}
 
 		@media (min-width: 320px) and (max-width: 480px) {
@@ -384,6 +398,17 @@
 
 		.preview-toolbar-tags {
 			margin-top: 0.5rem;
+		}
+
+		.tags-toolbar {
+			display: flex;
+			flex-flow: row nowrap;
+			align-content: center;
+			align-items: center;
+			justify-content: center;
+			width: 960px;
+			max-width: 95%;
+			margin: 1.2rem auto;
 		}
 
 		.tags-list {
@@ -518,17 +543,14 @@
 	</div>
 
 	<div id="page-tags" class="page" style="display: none">
-		<div style="width: 960px; max-width: 95%; margin: 1.2rem auto">
-			<input id="tags-search" type="search" placeholder="Search..." class="input" style="width: 100%">
-		</div>
-		<div>
-			<span>Sorting</span>
-			<select id="tags-sorting" style="margin: 1rem">
+		<div class="tags-toolbar">
+			<select id="tags-sorting" class="select" style="width: 250px">
 				<option value="alpha">Alphabetic Ascendant</option>
 				<option value="alpha-desc">Alphabetic Descendant</option>
 				<option value="count">Count Ascendant</option>
 				<option value="count-desc">Count Descendant</option>
 			</select>
+			<input id="tags-search" type="search" placeholder="Search..." class="input" style="flex: 1">
 		</div>
 		<ul class="tags-list"></ul>
 	</div>
@@ -665,6 +687,26 @@
 				$li.data('tag', tag.label);
 				$list.append($li);
 			});
+			var pattern = $('#tags-search').val();
+			filter_tags_list(pattern);
+		};
+
+		var filter_tags_list = function (pattern) {
+			$('.tags-list').find('li').each(function () {
+				var $this = $(this),
+					to_show = true;
+				if (pattern !== '') {
+					var search_string = $this.text().toLowerCase();
+					if (search_string.indexOf(pattern.toLowerCase()) === -1) {
+						to_show = false;
+					}
+				}
+				if (to_show) {
+					$this.show();
+				} else {
+					$this.hide();
+				}
+			});
 		};
 
 		var get_tag_pics_list = function (tag) {
@@ -746,8 +788,8 @@
 			pics.forEach(function (pic) {
 				var $pic = $(
 					`<div title="${pic.tags.join(' ')}" class="pic">` +
+						(pic.tags.indexOf('favorite') !== -1 ? '<div class="pic-favorite">Favorite</div>' : '') +
 						'<div class="pic-content"></div>' +
-						(pic.tags.indexOf('favorite') !== -1 ? '<i class="icon-star-full" style="position: absolute; top: 5px; left: 5px; color: orange; font-size: 1.5rem"></i>' : '') +
 					'</div>');
 				$pic.data('pic', pic);
 				observer.observe($pic[0]);
@@ -1078,6 +1120,11 @@
 		$('#tags-sorting').on('change', function () {
 			var sorting = $(this).val();
 			render_tags_list(sorting);
+		});
+
+		$('#tags-search').on('input', function () {
+			var pattern = $(this).val();
+			filter_tags_list(pattern);
 		});
 
 		$('.tags-list').on('click', 'li', function () {
