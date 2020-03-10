@@ -299,21 +299,33 @@ var http_return_error = function (response, code) {
 
 var http_return_file = function (request, response, filepath) {
 	console.log(`http_return_file: ${filepath}`);
-	const stat = fs.statSync(filepath);
-	const filesize = stat.size;
-	const range = request.headers.range;
-	if (range) {
-		const parts = range.replace(/bytes=/, '').split('-');
+	let stat;
+	try {
+		stat = fs.statSync(filepath);
+	} catch (e) {
+		http_return_error(response, 404);
+		return;
+	}
+	if (request.headers.range) {
+		console.log(`request.headers.range: ${request.headers.range}`);
+		const parts = request.headers.range.replace(/bytes=/, '').split('-');
 		const start = parseInt(parts[0], 10);
-		const end = parts[1] ? parseInt(parts[1], 10) : filesize - 1;
+		const end = parts[1] !== '' ? parseInt(parts[1], 10) : stat.size - 1;
+		/*
+		let end = parts[1] !== '' ? parseInt(parts[1], 10) : null;
+		if (!end) {
+			end = start + 5242880 > stat.size - 1 ? stat.size - 1 : start + 5242880;
+		}
+		*/
 		const chunksize = (end - start) + 1;
+		console.log(`start: ${start} - end: ${end} - chunksize: ${chunksize} - stat.size: ${stat.size}`);
 		response.statusCode = 206;
 		response.statusMessage = 'Partial Content';
 		let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
 		if (mime) {
 			response.setHeader('Content-Type', mime[0]);
 		}
-		response.setHeader('Content-Range', `bytes ${start}-${end}/${filesize}`);
+		response.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
 		response.setHeader('Accept-Ranges', 'bytes');
 		response.setHeader('Content-Length', chunksize);
 		const stream = fs.createReadStream(filepath, { start: start, end: end });
@@ -328,7 +340,7 @@ var http_return_file = function (request, response, filepath) {
 		if (mime) {
 			response.setHeader('Content-Type', mime[0]);
 		}
-		response.setHeader('Content-Length', filesize);
+		response.setHeader('Content-Length', stat.size);
 		const stream = fs.createReadStream(filepath);
 		stream.pipe(response);
 		stream.on('end', function () {
@@ -410,7 +422,7 @@ var list_files = function (tmp_path) {
 					return;
 				}
 				try {
-					let f = path.normalize(tmp_path + path.sep + filename),
+					let f = path.normalize(`${tmp_path}${path.sep}${filename}`),
 						stats = fs.statSync(f);
 					if (stats.isFile()) {
 						files_list.push(f);
