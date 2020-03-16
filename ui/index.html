@@ -1052,7 +1052,24 @@
 							onclick: function () {
 								remove_pic(pic);
 								this.close();
-								goto_page('page-pics');
+								let pics = $('.pics-container').data('pics'),
+									current_pic = $('#page-preview').data('pic');
+								if (current_pic && pics) {
+									let next_pic;
+									for (var i = 0; i < pics.length; ++i) {
+										if (pics[i].id === current_pic.id) {
+											if (pics[i + 1]) {
+												next_pic = pics[i + 1];
+											}
+											break;
+										}
+									}
+									if (next_pic) {
+										preview_render_pic(next_pic);
+									} else {
+										goto_page('page-pics');
+									}
+								}
 							}
 						}
 					]
