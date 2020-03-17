@@ -163,6 +163,22 @@
 			color: var(--color-3);
 		}
 
+		.button.button-danger {
+			background-color: #de6262;
+			color: #f5f5f5;
+		}
+
+		.button.button-danger:hover,
+		.button.button-danger:focus {
+			background-color: #da4d4d;
+			color: #e8e8e8;
+		}
+
+		.button.button-danger:active {
+			background-color: #d53838;
+			color: #dcdcdc;
+		}
+
 		.button.button-floating {
 			position: absolute;
 			bottom: 1rem;
@@ -666,11 +682,11 @@
 			}
 			if (mode === 'alpha') {
 				tags.sort(function (a, b) {
-					return a.label < b.label ? -1 : 1;
+					return a.label.toLowerCase() < b.label.toLowerCase() ? -1 : 1;
 				});
 			} else if (mode === 'alpha-desc') {
 				tags.sort(function (a, b) {
-					return a.label > b.label ? -1 : 1;
+					return a.label.toLowerCase() > b.label.toLowerCase() ? -1 : 1;
 				});
 			} else if (mode === 'count') {
 				tags.sort(function (a, b) {
@@ -683,8 +699,7 @@
 			}
 			var $list = $('.tags-list').empty();
 			tags.forEach(function (tag) {
-				var $li = $(`<li class="tags-list-item">${tag.label} (${tag.count})</li>`);
-				$li.data('tag', tag.label);
+				var $li = $(`<li data-tag="${tag.label}" class="tags-list-item">${tag.label} (${tag.count})</li>`);
 				$list.append($li);
 			});
 			var pattern = $('#tags-search').val();
@@ -696,7 +711,7 @@
 				var $this = $(this),
 					to_show = true;
 				if (pattern !== '') {
-					var search_string = $this.text().toLowerCase();
+					var search_string = $this.attr('data-tag').toLowerCase();
 					if (search_string.indexOf(pattern.toLowerCase()) === -1) {
 						to_show = false;
 					}
@@ -849,6 +864,7 @@
 			} else {
 				$favorite_icon.removeClass('icon-star-empty').addClass('icon-star-full').css({ color: 'orange' });
 			}
+			$preview.find('[data-action="delete"]').removeClass('button-danger');
 			$preview.find('#preview-tags').val(pic.tags.join('\n'));
 			var element;
 			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
@@ -1037,43 +1053,30 @@
 				edit_pic(pic, pic.tags);
 				preview_render_pic(pic);
 			} else if (action === 'delete') {
-				open_dialog({
-					title: 'Delete Pic',
-					content: 'Are you sure?',
-					buttons: [
-						{
-							label: 'Cancel',
-							onclick: function () {
-								this.close();
-							}
-						},
-						{
-							label: 'Delete',
-							onclick: function () {
-								remove_pic(pic);
-								this.close();
-								let pics = $('.pics-container').data('pics'),
-									current_pic = $('#page-preview').data('pic');
-								if (current_pic && pics) {
-									let next_pic;
-									for (var i = 0; i < pics.length; ++i) {
-										if (pics[i].id === current_pic.id) {
-											if (pics[i + 1]) {
-												next_pic = pics[i + 1];
-											}
-											break;
-										}
-									}
-									if (next_pic) {
-										preview_render_pic(next_pic);
-									} else {
-										goto_page('page-pics');
-									}
+				var $button = $(this);
+				if (!$button.hasClass('button-danger')) {
+					$button.addClass('button-danger');
+				} else {
+					remove_pic(pic);
+					let pics = $('.pics-container').data('pics'),
+						current_pic = $('#page-preview').data('pic');
+					if (current_pic && pics) {
+						let next_pic;
+						for (var i = 0; i < pics.length; ++i) {
+							if (pics[i].id === current_pic.id) {
+								if (pics[i + 1]) {
+									next_pic = pics[i + 1];
 								}
+								break;
 							}
 						}
-					]
-				});
+						if (next_pic) {
+							preview_render_pic(next_pic);
+						} else {
+							goto_page('page-pics');
+						}
+					}
+				}
 			} else if (action === 'tag') {
 				var tag = $(this).data('tag');
 				$('#header-search').val(tag).trigger('change');
