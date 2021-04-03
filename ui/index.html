@@ -553,7 +553,8 @@
 				<button data-action="close" title="Close" class="button button-icon button-frameless"><i class="icon-close"></i></button>
 			</div>
 			<div class="preview-toolbar-tags">
-				<textarea id="preview-tags" rows="10" class="input" style="width: 100%"></textarea>
+				<textarea id="preview-tags-edit" rows="10" class="input" style="width: 100%"></textarea>
+				<ul id="preview-tags-list" class="tags-list"></ul>
 			</div>
 		</div>
 	</div>
@@ -568,7 +569,7 @@
 			</select>
 			<input id="tags-search" type="search" placeholder="Search..." class="input" style="flex: 1">
 		</div>
-		<ul class="tags-list"></ul>
+		<ul id="tags-list" class="tags-list"></ul>
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -579,10 +580,14 @@
 			entries.forEach(function (entry) {
 				if (entry.isIntersecting) {
 					//console.log('Pic ' + entry.target + ' is in the viewport!');
-					// load image
-					render_pic(entry.target);
-					// Stop watching and load the image
-					self.unobserve(entry.target);
+					setTimeout(function () {
+						if (entry.isIntersecting) {
+							// load image
+							render_pic(entry.target);
+							// Stop watching and load the image
+							self.unobserve(entry.target);
+						}
+					}, 1000);
 				}
 			});
 		}, {
@@ -676,7 +681,7 @@
 		};
 
 		var render_tags_list = function (mode) {
-			var tags = $('#datalist-tags').data('tags');
+			let tags = $('#datalist-tags').data('tags');
 			if (!mode) {
 				mode = $('#tags-sorting').val();
 			}
@@ -697,17 +702,26 @@
 					return a.count > b.count ? -1 : 1;
 				});
 			}
-			var $list = $('.tags-list').empty();
+			var $list = $('#tags-list').empty();
 			tags.forEach(function (tag) {
 				var $li = $(`<li data-tag="${tag.label}" class="tags-list-item">${tag.label} (${tag.count})</li>`);
 				$list.append($li);
+				/*
+				var $pic = $(
+					`<div title="${tag.label}" class="pic">` +
+						'<div class="pic-content"></div>' +
+					'</div>');
+				$pic.data('pic', tag.cover);
+				$list.append($pic);
+				render_pic($pic);
+				*/
 			});
 			var pattern = $('#tags-search').val();
 			filter_tags_list(pattern);
 		};
 
 		var filter_tags_list = function (pattern) {
-			$('.tags-list').find('li').each(function () {
+			$('#tags-list').find('li').each(function () {
 				var $this = $(this),
 					to_show = true;
 				if (pattern !== '') {
@@ -827,7 +841,7 @@
 					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
 				};
 				img.src = '/pics/' + encodeURIComponent(pic.id);
-			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
+			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi', 'heic'].indexOf(pic.ext) !== -1) {
 				element = document.createElement('video');
 				element.autoplay = false;
 				element.controls = false;
@@ -855,6 +869,7 @@
 		};
 
 		var preview_render_pic = function (pic) {
+			$('.pic').removeClass('pic-selected');
 			var $preview = $('#page-preview'),
 				$preview_container = $preview.find('.preview-container').empty();
 			$preview.data('pic', pic);
@@ -865,7 +880,12 @@
 				$favorite_icon.removeClass('icon-star-empty').addClass('icon-star-full').css({ color: 'orange' });
 			}
 			$preview.find('[data-action="delete"]').removeClass('button-danger');
-			$preview.find('#preview-tags').val(pic.tags.join('\n'));
+			$preview.find('#preview-tags-edit').val(pic.tags.join('\n'));
+			let $list = $('#preview-tags-list').empty();
+			pic.tags.forEach(function (tag_label) {
+				var $li = $(`<li data-tag="${tag_label}" class="tags-list-item">${tag_label}</li>`);
+				$list.append($li);
+			});
 			var element;
 			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
 				element = document.createElement('video');
@@ -1026,13 +1046,12 @@
 
 		$('.pics-container').on('click', '.pic', function () {
 			var $pic = $(this);
-			if (window.EDIT_MODE) {
-				$pic.toggleClass('pic-selected');
-			} else {
-				var pic = $pic.data('pic');
-				goto_page('page-preview');
-				preview_render_pic(pic);
-			}
+			$pic.toggleClass('pic-selected');
+		}).on('dblclick', '.pic', function () {
+			var $pic = $(this);
+			var pic = $pic.data('pic');
+			goto_page('page-preview');
+			preview_render_pic(pic);
 		});
 
 		$('.preview-toolbar').on('click', '[data-action]', function () {
@@ -1083,11 +1102,14 @@
 			}
 		});
 
-		$('#preview-tags').on('change', function () {
-			var pic = $('#page-preview').data('pic');
+		$('#preview-tags-edit').on('change', function () {
+			let pic = $('#page-preview').data('pic');
 			pic.tags = [];
-			$(this).val().split(/\r\n|\r|\n/).forEach(function (tag) {
-				pic.tags.push(tag.trim());
+			$(this).val().split(/\r\n|\r|\n/).forEach(function (row) {
+				let tag = row.trim();
+				if (tag !== '') {
+					pic.tags.push(tag);
+				}
 			});
 			edit_pic(pic, pic.tags);
 			preview_render_pic(pic);
@@ -1095,7 +1117,7 @@
 
 		document.addEventListener('keyup', function (event) {
 			var $preview = $('#page-preview');
-			if ($preview.css('display') === 'none') {
+			if ($(event.target).hasClass('input') || $preview.css('display') === 'none') {
 				return;
 			}
 			if (event.key === 'ArrowLeft') {

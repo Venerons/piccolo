@@ -9,6 +9,7 @@ const { URL } = require('url');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const querystring = require("querystring");
 
 const PROTOCOL = 'http://';
 const HOSTNAME = '127.0.0.1';
@@ -58,7 +59,8 @@ const server = http.createServer((request, response) => {
 
 	} else if (tokens[1] === 'tags') {
 
-		const tag_id = tokens[2];
+		const tag_id = tokens[2] ? querystring.unescape(tokens[2]) : null;
+		console.log(tag_id);
 		if (!tag_id) {
 
 			// REQUEST: /tags
@@ -105,7 +107,11 @@ const server = http.createServer((request, response) => {
 					let pic_tags = file_get_tags(filepath),
 						index = pic_tags.indexOf(tag_id);
 					if (index !== -1) {
-						pic_tags[index] = new_tag;
+						if (pic_tags.indexOf(new_tag) !== -1) {
+							pic_tags.splice(index, 1);
+						} else {
+							pic_tags[index] = new_tag;
+						}
 						file_retag(filepath, pic_tags);
 					}
 				});
@@ -572,7 +578,7 @@ var tags_list = function (files_list) {
 			} else {
 				map[tag] = {
 					count: 1,
-					cover: file_get_id(filepath)
+					cover: pic_get_info(null, filepath)
 				};
 			}
 		});
@@ -615,6 +621,21 @@ var pic_get_filepath = function (pic_id, files_list) {
 	return null;
 };
 
+var pic_get_info = function (pic_id, filepath) {
+	if (pic_id && !filepath) {
+		filepath = pic_get_filepath(pic_id);
+	} else if (!pic_id && filepath) {
+		pic_id = file_get_id(filepath);
+	}
+	let stats = fs.statSync(filepath);
+	return {
+		id: pic_id,
+		ext: path.extname(filepath).toLowerCase().replace('.', ''),
+		tags: file_get_tags(filepath),
+		ts: stats.birthtime.getTime()
+	};
+};
+
 var pics_list = function (files_list, filter_tags) {
 	let pics = [];
 	files_list.forEach(function (filepath) {
@@ -626,13 +647,7 @@ var pics_list = function (files_list, filter_tags) {
 			});
 		}
 		if (match) {
-			let stats = fs.statSync(filepath);
-			pics.push({
-				id: file_get_id(filepath),
-				ext: path.extname(filepath).toLowerCase().replace('.', ''),
-				tags: pic_tags,
-				ts: stats.birthtime.getTime()
-			});
+			pics.push(pic_get_info(null, filepath));
 		}
 	});
 	pics.sort(function (a, b) {
