@@ -1,560 +1,169 @@
-// node piccolo.js <PICS_PATH> <PORT>
-
-// Examples:
-// node piccolo.js "/home/Admin/Images"
-// node piccolo.js "/home/Admin/Images" 8080
-
 const http = require('http');
 const { URL } = require('url');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const querystring = require("querystring");
+const querystring = require('querystring');
+const child_process = require('child_process');
 
-const PROTOCOL = 'http://';
-const HOSTNAME = '127.0.0.1';
-const PORT = process.argv[3] ? parseInt(process.argv[3], 10) : 3000;
-const PICS_PATH = process.argv[2];
-
-// MIME TYPE MAP
-
-var MIME_TYPE_MAP = {};
-fs.readFile(path.resolve(__dirname, 'ui/mime-map.json'), 'UTF-8', function (error, file) {
-	if (error) {
-		console.error('Warning: mime-map.json loading failed');
-	} else {
-		MIME_TYPE_MAP = JSON.parse(file);
-	}
-});
-
-// HTTP SERVER
-
-const server = http.createServer((request, response) => {
-	//console.log('request.httpVersion', request.httpVersion);
-	//console.log('request.method', request.method);
-	//console.log('request.url', request.url);
-	//console.log('request.headers', request.headers);
-	console.log(request.method, request.url);
-
-	request.on('error', (err) => {
-		console.error(err.stack);
-		http_return_error(response, 500);
+var getopt = function (argv_array) {
+	let options = {};
+	process.argv.forEach(function (item) {
+		var result = item.match(/^\-?\-(\w+)=\"?([^\"]+)\"?$/);
+		if (result) {
+			options[result[1]] = result[2];
+		}
 	});
+	return options;
+};
 
-	response.on('error', (err) => {
-		console.error(err.stack);
-	});
+const options = getopt(process.argv);
+const PICS_PATH = options.path || null;
+const HOSTNAME = options.hostname || '127.0.0.1';
+const PORT = options.port && !isNaN(parseInt(options.port, 10)) ? parseInt(options.port, 10) : '8080';
+const PASSWORD = options.password || null;
 
-	const parsed_url = new URL(`${PROTOCOL}${HOSTNAME}:${PORT}${request.url}`);
+console.log('');
+console.log(`PICS_PATH\t${PICS_PATH}`);
+console.log(`HOSTNAME\t${HOSTNAME}`);
+console.log(`PORT\t\t${PORT}`);
+console.log(`PASSWORD\t${PASSWORD}`);
+console.log('');
 
-	let tokens = parsed_url.pathname.split('/');
+if (!PICS_PATH) {
+	console.error('Error: missing "path" parameter.');
+	console.log('Usage:\nnode piccolo.js --path="<pics_path>" [--hostname="<ip_address>"] [--port="<logical_port>"] [--password="<password>"]');
+	return;
+}
+if (!path.isAbsolute(PICS_PATH)) {
+	PICS_PATH = path.resolve(PICS_PATH);
+}
 
-	if (parsed_url.pathname === '' || parsed_url.pathname === '/') {
+//###############################################
 
-		// REQUEST: /
-		// return index file
+const MIME_TYPE_MAP = {
+	'.html': 'text/html',
+	'.js': 'application/javascript',
+	'.json': 'application/json',
+	'.css': 'text/css',
+	'.bmp': 'image/bmp',
+	'.gif': 'image/gif',
+	'.ief': 'image/ief',
+	'.iefs': 'image/ief',
+	'.jpeg': 'image/jpeg',
+	'.jpg': 'image/jpeg',
+	'.png': 'image/png',
+	'.svg': 'image/svg+xml',
+	'.tif': 'image/tiff',
+	'.tiff': 'image/tiff',
+	'.webm': 'video/webm'
+};
 
-		let filepath = path.resolve(__dirname, 'ui/index.html');
-		http_return_file(request, response, filepath);
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+const HTTP_ERROR_MAP = {
+	'100': 'Continue',
+	'101': 'Switching Protocols',
+	'103': 'Early Hints',
+	'200': 'OK',
+	'201': 'Created',
+	'202': 'Accepted',
+	'203': 'Non-Authoritative Information',
+	'204': 'No Content',
+	'205': 'Reset Content',
+	'206': 'Partial Content',
+	'300': 'Multiple Choices',
+	'301': 'Moved Permanently',
+	'302': 'Found',
+	'303': 'See Other',
+	'304': 'Not Modified',
+	'307': 'Temporary Redirect',
+	'308': 'Permanent Redirect',
+	'400': 'Bad Request',
+	'401': 'Unauthorized',
+	'402': 'Payment Required',
+	'403': 'Forbidden',
+	'404': 'Not Found',
+	'405': 'Method Not Allowed',
+	'406': 'Not Acceptable',
+	'407': 'Proxy Authentication Required',
+	'408': 'Request Timeout',
+	'409': 'Conflict',
+	'410': 'Gone',
+	'411': 'Length Required',
+	'412': 'Precondition Failed',
+	'413': 'Payload Too Large',
+	'414': 'URI Too Long',
+	'415': 'Unsupported Media Type',
+	'416': 'Range Not Satisfiable',
+	'417': 'Expectation Failed',
+	'418': 'I\'m a teapot',
+	'422': 'Unprocessable Entity',
+	'425': 'Too Early',
+	'426': 'Upgrade Required',
+	'428': 'Precondition Required',
+	'429': 'Too Many Requests',
+	'431': 'Request Header Fields Too Large',
+	'451': 'Unavailable For Legal Reasons',
+	'500': 'Internal Server Error',
+	'501': 'Not Implemented',
+	'502': 'Bad Gateway',
+	'503': 'Service Unavailable',
+	'504': 'Gateway Timeout',
+	'505': 'HTTP Version Not Supported',
+	'506': 'Variant Also Negotiates',
+	'507': 'Insufficient Storage',
+	'508': 'Loop Detected',
+	'510': 'Not Extended',
+	'511': 'Network Authentication Required'
+}
 
-	} else if (tokens[1] === 'tags') {
 
-		const tag_id = tokens[2] ? querystring.unescape(tokens[2]) : null;
-		console.log(tag_id);
-		if (!tag_id) {
+//###############################################
 
-			// REQUEST: /tags
-			// list tags
-
-			let files_list = list_files(PICS_PATH);
-			http_return_json(response, { status: 'ok', tags: tags_list(files_list) });
-
-		} else {
-
-			const action = tokens[3];
-			if (!action) {
-
-				// REQUEST: /tags/<id>
-				// list pics containing this tag
-
-				let files_list = list_files(PICS_PATH);
-				http_return_json(response, { status: 'ok', pics: pics_list(files_list, [tag_id]) });
-
-			} if (action === 'remove') {
-
-				// REQUEST: /tags/<id>/remove
-				// remove tag, removing it from any pic
-
-				let files_list = list_files(PICS_PATH);
-				files_list.forEach(function (filepath) {
-					let pic_tags = file_get_tags(filepath),
-						index = pic_tags.indexOf(tag_id);
-					if (index !== -1) {
-						pic_tags.splice(index, 1);
-						file_retag(filepath, pic_tags);
-					}
-				});
-				http_return_json(response, { status: 'ok' });
-
-			} else if (action === 'edit') {
-
-				// REQUEST: /tags/<id>/edit?new=<new_tag>
-				// edit (rename) tag, replacing it from any pic
-
-				const new_tag = parsed_url.searchParams.get('new');
-				let files_list = list_files(PICS_PATH);
-				files_list.forEach(function (filepath) {
-					let pic_tags = file_get_tags(filepath),
-						index = pic_tags.indexOf(tag_id);
-					if (index !== -1) {
-						if (pic_tags.indexOf(new_tag) !== -1) {
-							pic_tags.splice(index, 1);
-						} else {
-							pic_tags[index] = new_tag;
-						}
-						file_retag(filepath, pic_tags);
-					}
-				});
-				http_return_json(response, { status: 'ok' });
-
-			}
-		}
-
-	} else if (tokens[1] === 'pics') {
-
-		const pic_id = tokens[2];
-		if (!pic_id) {
-
-			// REQUEST: /pics
-			// list all pics
-
-			let files_list = list_files(PICS_PATH);
-			http_return_json(response, { status: 'ok', pics: pics_list(files_list) });
-
-		} else if (pic_id === 'random') {
-
-			// REQUEST: /pics/random
-			// list random pics
-
-			let files_list = list_files(PICS_PATH),
-				quantity = 50,
-				random_files_list = [];
-			if (quantity > files_list.length) {
-				quantity = files_list.length;
-			}
-			for (let i = 0; i < quantity; ++i) {
-				let filepath = files_list[Math.floor(Math.random() * files_list.length)];
-				if (random_files_list.indexOf(filepath) !== -1) {
-					i--;
-				} else {
-					random_files_list.push(filepath);
-				}
-			}
-			http_return_json(response, { status: 'ok', pics: pics_list(random_files_list) });
-
-		} else if (pic_id === 'untagged') {
-
-			// REQUEST: /pics/untagged
-			// list untagged pics
-
-			let files_list = list_files(PICS_PATH);
-			let untagged_files_list = [];
-			files_list.forEach(function (filepath) {
-				if (file_get_tags(filepath).length === 0) {
-					untagged_files_list.push(filepath);
-				}
-			});
-			http_return_json(response, { status: 'ok', pics: pics_list(untagged_files_list) });
-
-		} else if (pic_id === 'rehash') {
-
-			// REQUEST: /pics/rehash
-			// rehash and remix all pics
-
-			let files_list = list_files(PICS_PATH);
-			files_rehash(files_list);
-			files_list = list_files(PICS_PATH);
-			files_remix(files_list);
-			http_return_json(response, { status: 'ok' });
-
-		} else if (pic_id === 'upload') {
-
-			// REQUEST: /pics/upload
-			// upload a pic
-
-			let body = [];
-			request.on('data', (chunk) => {
-				body.push(chunk);
-				/*
-				// upload limit
-				if (body.length > ???) {
-					request.connection.destroy();
-				}
-				*/
-			}).on('end', () => {
-				body = Buffer.concat(body).toString();
-				console.log(body);
-				// at this point, `body` has the entire request body stored in it as a string
-				http_return_json(response, { status: 'ok' });
-			});
-
-		} else {
-
-			const action = tokens[3];
-			if (!action) {
-
-				// REQUEST: /pics/<id>
-				// serve pic file
-
-				let filepath = pic_get_filepath(decodeURIComponent(pic_id));
-				if (!filepath) {
-					http_return_error(response, 404);
-				} else {
-					http_return_file(request, response, filepath);
-				}
-
-			} else if (action === 'remove') {
-
-				// REQUEST: /pics/<id>/remove
-				// remove pic
-
-				let filepath = pic_get_filepath(pic_id);
-				file_remove(filepath);
-				http_return_json(response, { status: 'ok' });
-
-			} else if (action === 'edit') {
-
-				// REQUEST: /pics/<id>/edit?tags=<tags>
-				// edit pic
-
-				const request_tags = parsed_url.searchParams.get('tags');
-				let filepath = pic_get_filepath(pic_id);
-				let tags = request_tags ? JSON.parse(request_tags) : [];
-				file_retag(filepath, tags);
-				http_return_json(response, { status: 'ok' });
-
-			}
-		}
-
-	} else {
-
-		// REQUEST: fs server
-		// serve file
-
-		let filepath = path.resolve(__dirname, `ui/${parsed_url.pathname.substring(1)}`);
-		http_return_file(request, response, filepath);
-
+var humanize_size = function (bytes, decimals = 2) {
+	if (bytes === 0) {
+		return '0 Bytes';
 	}
+	const k = 1024;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
 
-	console.log('\n---\n');
-});
-
-server.listen(PORT, HOSTNAME, () => {
-	console.log(`Server running at ${PROTOCOL}${HOSTNAME}:${PORT}/\nCTRL + C to shutdown\n\n===\n`);
-});
-
-/*
-##     ## ######## ######## ########
-##     ##    ##       ##    ##     ##
-##     ##    ##       ##    ##     ##
-#########    ##       ##    ########
-##     ##    ##       ##    ##
-##     ##    ##       ##    ##
-##     ##    ##       ##    ##
-*/
-
-var http_return_error = function (response, code) {
-	console.log(`http_return_error: ${code}`);
-	let message = 'Unknown Error';
-	if (code === 200) {
-		message = 'OK';
-	} else if (code === 206) {
-		message = 'Partial Content';
-	} else if (code === 301) {
-		message = 'Moved Permanently';
-	} else if (code === 302) {
-		message = 'Found';
-	} else if (code === 304) {
-		message = 'Not Modified';
-	} else if (code === 400) {
-		message = 'Bad Request';
-	} else if (code === 403) {
-		message = 'Forbidden';
-	} else if (code === 404) {
-		message = 'Not Found';
-	} else if (code === 405) {
-		message = 'Method Not Allowed';
-	} else if (code === 408) {
-		message = 'Request Time-out';
-	} else if (code === 411) {
-		message = 'Length Required';
-	} else if (code === 412) {
-		message = 'Precondition Failed';
-	} else if (code === 416) {
-		message = 'Requested range not satisfiable';
-	} else if (code === 500) {
-		message = 'Internal Server Error';
-	} else if (code === 503) {
-		message = 'Server Unavailable';
+var humanize_time = function (milliseconds) {
+	let number_ending = function (number) {
+		return (number > 1) ? 's' : '';
+	};
+	let temp = Math.floor(milliseconds / 1000),
+		years = Math.floor(temp / 31536000);
+	if (years) {
+		return years + ' year' + number_ending(years);
 	}
-	response.statusCode = code;
-	response.statusMessage = message;
-	response.setHeader('Content-Type', 'text/html');
-	response.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${code} ${message}</title></head><body><h1>${code} ${message}</h1><img src="https://http.cat/${code}" alt="${code} ${message}" title="${code} ${message}"></body></html>\n`);
-};
-
-var http_return_file = function (request, response, filepath) {
-	console.log(`http_return_file: ${filepath}`);
-	let stat;
-	try {
-		stat = fs.statSync(filepath);
-	} catch (e) {
-		http_return_error(response, 404);
-		return;
+	//TODO: Months! Maybe weeks? 
+	let days = Math.floor((temp %= 31536000) / 86400);
+	if (days) {
+		return days + ' day' + number_ending(days);
 	}
-	if (request.headers.range) {
-		console.log(`request.headers.range: ${request.headers.range}`);
-		const parts = request.headers.range.replace(/bytes=/, '').split('-');
-		const start = parseInt(parts[0], 10);
-		const end = parts[1] !== '' ? parseInt(parts[1], 10) : stat.size - 1;
-		/*
-		let end = parts[1] !== '' ? parseInt(parts[1], 10) : null;
-		if (!end) {
-			end = start + 5242880 > stat.size - 1 ? stat.size - 1 : start + 5242880;
-		}
-		*/
-		const chunksize = (end - start) + 1;
-		console.log(`start: ${start} - end: ${end} - chunksize: ${chunksize} - stat.size: ${stat.size}`);
-		response.statusCode = 206;
-		response.statusMessage = 'Partial Content';
-		let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
-		if (mime) {
-			response.setHeader('Content-Type', mime[0]);
-		}
-		response.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
-		response.setHeader('Accept-Ranges', 'bytes');
-		response.setHeader('Content-Length', chunksize);
-		const stream = fs.createReadStream(filepath, { start: start, end: end });
-		stream.pipe(response);
-		stream.on('end', function () {
-			response.end();
-		});
-	} else {
-		response.statusCode = 200;
-		response.statusMessage = 'OK';
-		let mime = MIME_TYPE_MAP.extensions ? MIME_TYPE_MAP.extensions[path.extname(filepath)] : null;
-		if (mime) {
-			response.setHeader('Content-Type', mime[0]);
-		}
-		response.setHeader('Content-Length', stat.size);
-		const stream = fs.createReadStream(filepath);
-		stream.pipe(response);
-		stream.on('end', function () {
-			response.end();
-		});
+	let hours = Math.floor((temp %= 86400) / 3600);
+	if (hours) {
+		return hours + ' hour' + number_ending(hours);
 	}
-};
-
-var http_return_json = function (response, json) {
-	response.statusCode = 200;
-	response.statusMessage = 'OK';
-	response.setHeader('Content-Type', 'application/json');
-	response.end(JSON.stringify(json) + '\n');
-};
-
-/*
-######## #### ##       ########  ######
-##        ##  ##       ##       ##    ##
-##        ##  ##       ##       ##
-######    ##  ##       ######    ######
-##        ##  ##       ##             ##
-##        ##  ##       ##       ##    ##
-##       #### ######## ########  ######
-*/
-
-var file_get_id = function (filepath) {
-	let filename = path.basename(filepath, path.extname(filepath)),
-		pic_id = filename.match(/^[a-f0-9]{32}/g) ? filename.match(/^[a-f0-9]{32}/g)[0] : null;
-	return pic_id;
-};
-
-var file_get_tags = function (filepath) {
-	let filename = path.basename(filepath, path.extname(filepath)),
-		pic_id = file_get_id(filepath),
-		pic_tags = filename.split(' ');
-	if (pic_tags.indexOf(pic_id) !== -1) {
-		pic_tags.splice(pic_tags.indexOf(pic_id), 1);
+	let minutes = Math.floor((temp %= 3600) / 60);
+	if (minutes) {
+		return minutes + ' minute' + number_ending(minutes);
 	}
-	return pic_tags;
-};
-
-var file_retag = function (filepath, tags) {
-	let filename = path.basename(filepath, path.extname(filepath)),
-		pic_id = file_get_id(filepath),
-		tags_string = tags.sort(tags_sorting).join(' '),
-		ext = path.extname(filepath),
-		new_filename = `${pic_id || ''}${tags_string.length > 0 ? ` ${tags_string}` : ''}`;
-	if (filename !== new_filename) {
-		console.log('file_retag: Renaming', filename, '-->', new_filename);
-		try {
-			fs.renameSync(path.normalize(filepath), path.normalize(`${path.dirname(filepath)}${path.sep}${new_filename}${ext}`));
-		} catch (e) {
-			console.error('file_retag: Error renaming file', e);
-		}
+	let seconds = temp % 60;
+	if (seconds) {
+		return seconds + ' second' + number_ending(seconds);
 	}
+	return 'less than a second'; // 'just now' or other string you like
 };
 
-var file_remove = function (filepath) {
-	let filename = path.basename(filepath, path.extname(filepath));
-	console.log('file_remove: Removing', filename);
-	try {
-		fs.unlinkSync(filepath);
-	} catch (e) {
-		console.error('file_remove: Error unlinking file', e);
-	}
-};
-
-var list_files = function (tmp_path) {
-	let files_list = [];
-	if (!path.isAbsolute(tmp_path)) {
-		tmp_path = path.resolve(tmp_path);
-	}
-	try {
-		let stats = fs.statSync(tmp_path);
-		if (stats.isDirectory()) {
-			let array = fs.readdirSync(tmp_path);
-			array.forEach(function (filename) {
-				if (filename.charAt(0) === '.') {
-					return;
-				}
-				try {
-					let f = path.normalize(`${tmp_path}${path.sep}${filename}`),
-						stats = fs.statSync(f);
-					if (stats.isFile()) {
-						files_list.push(f);
-					} else if (stats.isDirectory()) {
-						files_list = files_list.concat(list_files(f));
-					}
-				} catch (e) {}
-			});
-		} else if (stats.isFile()) {
-			files_list.push(tmp_path);
-		}
-	} catch (e) {}
-	return files_list;
-};
-
-var files_rehash = function (files_list) {
-	console.log('files_rehash...');
-	console.log('\tSearching duplicates...');
-	let timestamp = Date.now();
-	process.stdout.write('\tProcessing...');
-	let hash_map = Object.create(null);
-	let count = 0;
-	files_list.forEach(function (filepath, index) {
-		let digest = crypto.createHash('md5').update(fs.readFileSync(filepath)).digest('hex');
-		if (hash_map[digest]) {
-			hash_map[digest].push(filepath);
-			count++;
-		} else {
-			hash_map[digest] = [filepath];
-		}
-		process.stdout.clearLine();
-		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${index + 1}/${files_list.length} (${Math.floor((index + 1) * 100 / files_list.length)}%)`);
-	});
-	console.log(`\n\t${count} duplicated files has been found in ${(Date.now() - timestamp) / 1000} seconds.`);
-	console.log('\tRehashing files...');
-	timestamp = Date.now();
-	let count_rehashed = 0,
-		count_duplicate_removed = 0,
-		issues = [],
-		hash_array = Object.keys(hash_map);
-	process.stdout.write('\tProcessing...');
-	hash_array.forEach(function (digest, index) {
-		let tags = [];
-		hash_map[digest].forEach(function (filepath) {
-			let file_tags = file_get_tags(filepath);
-			file_tags.forEach(function (tag) {
-				tag = tag.trim();
-				if (tag !== '' && !(/(^[0-9no\-_]+$|^IMG|^DSC|^Screenshot|^Schermata)/g.test(tag)) && tags.indexOf(tag) === -1) {
-					tags.push(tag);
-				}
-			});
-		});
-		tags = tags.length > 0 ? ` ${tags.sort(tags_sorting).join(' ')}` : '';
-		hash_map[digest].forEach(function (filepath, index) {
-			if (index === 0) {
-				let new_filename = digest + tags;
-				if (new_filename.length + path.extname(filepath).length > 255) {
-					new_filename = digest;
-					issues.push(`\tName "${new_filename}" too long, reduced to "${digest}"`);
-				}
-				if (new_filename !== path.basename(filepath, path.extname(filepath))) {
-					fs.renameSync(path.normalize(filepath), path.normalize(`${path.dirname(filepath)}${path.sep}${new_filename}${path.extname(filepath).toLowerCase()}`));
-					count_rehashed++;
-				}
-			} else {
-				try {
-					fs.unlinkSync(filepath);
-					count_duplicate_removed++;
-					issues.push(`\tRemoved duplicate file ${path.basename(filepath)}`);
-				} catch (e) {
-					issues.push(`\tError: An error occurred removing duplicate file ${filepath}`);
-				}
-			}
-		});
-		process.stdout.clearLine();
-		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${index + 1}/${hash_array.length} (${Math.floor((index + 1) * 100 / hash_array.length)}%)`);
-	});
-	console.log(`\n\tRehashing completed in ${(Date.now() - timestamp) / 1000} seconds.`);
-	issues.forEach(function (issue) {
-		console.log(issue);
-	});
-	console.log(`\t${count_rehashed} files has been rehashed.`);
-	console.log(`\t${count_duplicate_removed} duplicated files has been removed.`);
-	console.log('DONE.');
-};
-
-var files_remix = function (files_list) {
-	console.log('files_remix...');
-	let timestamp = Date.now();
-	process.stdout.write('\tProcessing...');
-	files_list.forEach(function (filepath, index) {
-		let ext = path.extname(filepath).substring(1).toLowerCase(),
-			basename = path.basename(filepath),
-			mixed_path = `${PICS_PATH}${path.sep}${ext}${path.sep}${basename}`;
-		if (filepath !== mixed_path) {
-			try {
-				fs.accessSync(path.normalize(`${PICS_PATH}${path.sep}${ext}`), fs.constants.F_OK);
-			} catch (e) {
-				fs.mkdirSync(path.normalize(`${PICS_PATH}${path.sep}${ext}`), { recursive: true });
-			}
-			fs.renameSync(path.normalize(filepath), path.normalize(mixed_path));
-		}
-		process.stdout.clearLine();
-		process.stdout.cursorTo(0);
-		process.stdout.write(`\t${index + 1}/${files_list.length} (${Math.floor((index + 1) * 100 / files_list.length)}%)`);
-	});
-	console.log(`\tRemixing completed in ${(Date.now() - timestamp) / 1000} seconds.`);
-	console.log('DONE.');
-};
-
-/*
-########    ###     ######    ######
-   ##      ## ##   ##    ##  ##    ##
-   ##     ##   ##  ##        ##
-   ##    ##     ## ##   ####  ######
-   ##    ######### ##    ##        ##
-   ##    ##     ## ##    ##  ##    ##
-   ##    ##     ##  ######    ######
-*/
-
-var tags_sorting = function (a, b) {
-	if (/^[a-f0-9]{32}$/g.test(a)) {
+var tag_sorting = function (a, b) {
+	if (/^[0-9a-f]{32}$/g.test(a)) {
 		return -1;
-	} else if (/^[a-f0-9]{32}$/g.test(b)) {
+	} else if (/^[0-9a-f]{32}$/g.test(b)) {
 		return 1;
 	} else if (a.toLowerCase() < b.toLowerCase()) {
 		return -1;
@@ -569,89 +178,647 @@ var tags_sorting = function (a, b) {
 	}
 };
 
-var tags_list = function (files_list) {
-	let map = {};
-	files_list.forEach(function (filepath) {
-		file_get_tags(filepath).forEach(function (tag) {
-			if (map[tag]) {
-				map[tag].count++;
-			} else {
-				map[tag] = {
-					count: 1,
-					cover: pic_get_info(null, filepath)
-				};
+var get_files_list = function () {
+	let files_list = [],
+		count = 0;
+	try {
+		let root_files = fs.readdirSync(PICS_PATH, { withFileTypes: true });
+		root_files.forEach(function (root_item) {
+			if (root_item.name !== 'thumb' && root_item.name.charAt(0) !== '.') {
+				const root_file_path = path.resolve(PICS_PATH, root_item.name);
+				if (root_item.isFile()) {
+					files_list.push(root_file_path);
+					process.stdout.clearLine();
+					process.stdout.cursorTo(0);
+					process.stdout.write(`Listed file #${++count}`);
+				} else if (root_item.isDirectory()) {
+					let subdir_files = fs.readdirSync(root_file_path, { withFileTypes: true });
+					subdir_files.forEach(function (subdir_item) {
+						if (subdir_item.name.charAt(0) !== '.') {
+							const subdir_file_path = path.resolve(root_file_path, subdir_item.name);
+							if (subdir_item.isFile()) {
+								files_list.push(subdir_file_path);
+								process.stdout.clearLine();
+								process.stdout.cursorTo(0);
+								process.stdout.write(`Listed file #${++count}`);
+							}
+						}
+					});
+				}
 			}
 		});
-	});
-	let tags = [];
-	Object.keys(map).forEach(function (tag) {
-		tags.push({
-			label: tag,
-			count: map[tag].count,
-			cover: map[tag].cover
-		});
-	});
-	tags.sort(function (a, b) {
-		return tags_sorting(a.label, b.label);
-	});
-	return tags;
+	} catch (error) {
+		console.error(error);
+	}
+	process.stdout.write(`\n`);
+	return files_list;
 };
+
+var get_cache = function (files_list) {
+	let cache = { pics: {} };
+	let count_cached = 0;
+	let count_skipped = 0;
+	files_list.forEach(function (file_path) {
+		let pic_ext = path.extname(file_path),
+			tokens = path.basename(file_path, pic_ext).split(' '),
+			pic_id = tokens[0] && tokens[0].match(/^[0-9a-f]{32}$/) ? tokens[0] : null;
+		if (tokens.includes(pic_id)) {
+			tokens.splice(tokens.indexOf(pic_id), 1);
+		}
+		if (!pic_id) {
+			count_skipped++;
+		} else {
+			let info = {
+				id: pic_id,
+				path: file_path,
+				tags: tokens,
+				ext: pic_ext
+			};
+			cache.pics[info.id] = info;
+			process.stdout.clearLine();
+			process.stdout.cursorTo(0);
+			process.stdout.write(`Cached file ${++count_cached} / ${files_list.length}`);
+		}
+	});
+	process.stdout.write(`\n`);
+	if (count_skipped > 0) {
+		console.log(`Skipped ${count_skipped} id-less files.`);
+	}
+	return cache;
+};
+
+var rehash = function (files_list) {
+	const timestamp = Date.now();
+	let count_done = 0;
+	let count_duplicate = 0;
+	let hash_map = Object.create(null);
+	files_list.forEach(function (file_path) {
+		let pic_ext = path.extname(file_path),
+			tokens = path.basename(file_path, pic_ext).split(' '),
+			pic_id = tokens[0] && tokens[0].match(/^[0-9a-f]{32}$/) ? tokens[0] : null;
+		if (tokens.includes(pic_id)) {
+			tokens.splice(tokens.indexOf(pic_id), 1);
+		}
+		let pic = {
+			id: pic_id,
+			path: file_path,
+			tags: tokens,
+			ext: pic_ext.toLowerCase()
+		};
+		if (!pic.id) {
+			// file doesn't have ID
+			pic.id = crypto.createHash('md5').update(fs.readFileSync(file_path)).digest('hex');
+		}
+		if (!hash_map[pic.id]) {
+			// no duplicate found
+			hash_map[pic.id] = pic;
+		} else {
+			// duplicate found
+			pic.tags.forEach(function (tag) {
+				tag = tag.trim();
+				if (tag !== '' && !(/(^[0-9no\-_\.]+$|^IMG|^DSC|^Screenshot|^Schermata)/g.test(tag))) {
+					if (!hash_map[pic.id].tags.includes(tag)) {
+						hash_map[pic.id].tags.push(tag);
+					}
+				}
+			});
+			try {
+				fs.unlinkSync(file_path);
+				count_duplicate++;
+			} catch (error) {
+				console.error('\n', error);
+			}
+		}
+		count_done++;
+		process.stdout.clearLine();
+		process.stdout.cursorTo(0);
+		process.stdout.write(`${count_done}/${files_list.length} (${Math.floor((count_done) * 100 / files_list.length)}%) - ${count_duplicate} duplicates removed`);
+	});
+	process.stdout.write('\n');
+	count_done = 0;
+	let hash_array = Object.keys(hash_map);
+	hash_array.forEach(function (hash) {
+		const pic = hash_map[hash];
+		const file_name = `${pic.id}${pic.tags.length > 0 ? ` ${pic.tags.sort(tag_sorting).join(' ')}` : ''}${pic.ext}`;
+		if (file_name.length > 255) {
+			file_name = `${pic.id}${pic.ext}`;
+		}
+		const new_file_path = path.resolve(PICS_PATH, pic.ext.substring(1), file_name);
+		try {
+			fs.accessSync(path.resolve(PICS_PATH, pic.ext.substring(1)), fs.constants.F_OK);
+		} catch (error) {
+			fs.mkdirSync(path.resolve(PICS_PATH, pic.ext.substring(1)), { recursive: true });
+		}
+		if (new_file_path !== pic.path) {
+			try {
+				fs.renameSync(pic.path, new_file_path);
+			} catch (error) {
+				console.error('\n', error);
+			}
+		}
+		count_done++;
+		process.stdout.clearLine();
+		process.stdout.cursorTo(0);
+		process.stdout.write(`${count_done}/${hash_array.length} (${Math.floor((count_done) * 100 / hash_array.length)}%)`);
+	});
+	process.stdout.write('\n');
+	console.log(`Rehash completed in ${Date.now() - timestamp} seconds (${humanize_time(Date.now() - timestamp)}).`);
+};
+
+//###############################################
+
+var FFMPEG_AVAILABLE = false;
+try {
+	child_process.execSync('ffmpeg -version');
+	FFMPEG_AVAILABLE = true;
+	console.error('ffmpeg available.');
+} catch (e) {
+	console.error('ffmpeg NOT available.');
+}
+try {
+	fs.accessSync(path.resolve(PICS_PATH, 'thumb'), fs.constants.F_OK);
+} catch (error) {
+	fs.mkdirSync(path.resolve(PICS_PATH, 'thumb'), { recursive: true });
+}
+var CACHE = get_cache(get_files_list());
 
 /*
-########  ####  ######   ######
-##     ##  ##  ##    ## ##    ##
-##     ##  ##  ##       ##
-########   ##  ##        ######
-##         ##  ##             ##
-##         ##  ##    ## ##    ##
-##        ####  ######   ######
+fs.writeFile('/tmp/piccolo.cache', JSON.stringify(CACHE), function (error) {
+	if (error) {
+		console.error(error);
+	}
+});
 */
 
-var pic_get_filepath = function (pic_id, files_list) {
-	if (!files_list) {
-		files_list = list_files(PICS_PATH);
-	}
-	for (let i = 0; i < files_list.length; ++i) {
-		let filepath = files_list[i],
-			file_id = file_get_id(filepath);
-		if (file_id === pic_id) {
-			return filepath;
-		}
-	}
-	return null;
-};
+//###############################################
 
-var pic_get_info = function (pic_id, filepath) {
-	if (pic_id && !filepath) {
-		filepath = pic_get_filepath(pic_id);
-	} else if (!pic_id && filepath) {
-		pic_id = file_get_id(filepath);
-	}
-	let stats = fs.statSync(filepath);
-	return {
-		id: pic_id,
-		ext: path.extname(filepath).toLowerCase().replace('.', ''),
-		tags: file_get_tags(filepath),
-		ts: stats.birthtime.getTime()
+const server = http.createServer(function (request, response) {
+	console.log(`${request.method}\t${request.url}`);
+	//console.log('request.httpVersion', request.httpVersion);
+	//console.log('request.headers', request.headers);
+
+	request.on('error', (error) => {
+		console.error(`Error: catched request error. Request: ${request.method} ${request.url}`);
+		console.error(error);
+	});
+
+	response.on('error', (error) => {
+		console.error(`Error: catched response error. Request: ${request.method} ${request.url}`);
+		console.error(error);
+	});
+
+	var http_return_file = function (http_code, file_path) {
+		//console.log(`http_return_file: ${file_path}`);
+		fs.stat(file_path, function (error, stats) {
+			if (error) {
+				http_return_json(404);
+			} else {
+				const mime = MIME_TYPE_MAP[path.extname(file_path)];
+				if (request.headers.range) {
+					//console.log(`request.headers.range: ${request.headers.range}`);
+					const parts = request.headers.range.replace(/bytes=/, '').split('-');
+					const start = parseInt(parts[0], 10);
+					const end = parts[1] !== '' ? parseInt(parts[1], 10) : stats.size - 1;
+					/*
+					let end = parts[1] !== '' ? parseInt(parts[1], 10) : null;
+					if (!end) {
+						end = start + 5242880 > stats.size - 1 ? stats.size - 1 : start + 5242880;
+					}
+					*/
+					const chunksize = (end - start) + 1;
+					//console.log(`start: ${start} - end: ${end} - chunksize: ${chunksize} (${humanize_size(chunksize)}) - stats.size: ${stats.size} (${humanize_size(stats.size)})`);
+					response.statusCode = 206;
+					response.statusMessage = 'Partial Content';
+					if (mime) {
+						response.setHeader('Content-Type', mime);
+					}
+					response.setHeader('Content-Range', `bytes ${start}-${end}/${stats.size}`);
+					response.setHeader('Accept-Ranges', 'bytes');
+					response.setHeader('Content-Length', chunksize);
+					const stream = fs.createReadStream(file_path, { start: start, end: end });
+					stream.pipe(response);
+					stream.on('end', function () {
+						response.end();
+					});
+				} else {
+					response.statusCode = http_code;
+					response.statusMessage = HTTP_ERROR_MAP[http_code.toString()] || 'Unknown';
+					if (mime) {
+						response.setHeader('Content-Type', mime);
+					}
+					response.setHeader('Content-Length', stats.size);
+					const stream = fs.createReadStream(file_path);
+					stream.pipe(response);
+					stream.on('end', function () {
+						response.end();
+					});
+				}
+			}
+		});
 	};
-};
 
-var pics_list = function (files_list, filter_tags) {
-	let pics = [];
-	files_list.forEach(function (filepath) {
-		let pic_tags = file_get_tags(filepath),
-			match = true;
-		if (filter_tags) {
-			filter_tags.forEach(function (tag) {
-				match = match && pic_tags.includes(tag);
-			});
+	var http_return_json = function (http_code, json) {
+		//console.log(`http_return_json: ${http_code}`);
+		response.statusCode = http_code;
+		response.statusMessage = HTTP_ERROR_MAP[http_code.toString()] || 'Unknown';
+		if (json) {
+			response.setHeader('Content-Type', 'application/json');
+			response.write(JSON.stringify(json) + '\n');
 		}
-		if (match) {
-			pics.push(pic_get_info(null, filepath));
+		response.end();
+	};
+
+	//const parsed_url = new URL(request.url, `http://${request.headers.host}`);
+
+	/*
+	let body = [];
+	request.on('data', function (chunk) {
+		body.push(chunk);
+	}).on('end', function () {
+		body = JSON.parse(Buffer.concat(body).toString());
+		// do stuff
+	});
+	*/
+
+	if (request.url === '' || request.url === '/') {
+
+		const file_path = path.resolve(__dirname, 'ui/index.html');
+		http_return_file(200, file_path);
+
+	} else if (request.url.match(/^\/ui\/.+/)) {
+
+		const parsed_url = new URL(`http://${HOSTNAME}:${PORT}${request.url}`);
+		const file_path = path.resolve(__dirname, parsed_url.pathname.substring(1));
+		http_return_file(200, file_path);
+
+	} else if (request.url.match(/^\/api\/.+/)) {
+
+		if (PASSWORD && !request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/raw$/) && !request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/thumbnail$/)) {
+			const authorization = request.headers.authorization ? request.headers.authorization.match(/^Basic (.+)$/) : null;
+			if (!authorization) {
+				http_return_json(401);
+				return;
+			}
+			const buff = Buffer.from(authorization[1], 'base64');
+			const text = buff.toString('utf8');
+			if (text !== `piccolo:${PASSWORD}`) {
+				http_return_json(401);
+				return;
+			}
 		}
-	});
-	pics.sort(function (a, b) {
-		return a.ts > b.ts ? -1 : 1;
-	});
-	return pics;
-};
+
+		if (request.url.match(/^\/api\/auth$/)) {
+
+			if (request.method === 'GET') {
+				// GET /api/auth
+				// check authentication
+				http_return_json(200);
+			} else {
+				http_return_json(405);
+			}
+
+		} else if (request.url.match(/^\/api\/pic\/random$/)) {
+
+			if (request.method === 'GET') {
+				// GET /api/pic/random
+				// return info for all pics
+
+				const pics_list = Object.keys(CACHE.pics);
+				const pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
+				const pic = CACHE.pics[pic_id];
+				if (pic.size) {
+					let pic_info = JSON.parse(JSON.stringify(pic));
+					delete pic_info.path;
+					http_return_json(200, pic_info);
+				} else {
+					//console.log(`Getting stat of file ${pic.path}`);
+					fs.stat(pic.path, function (error, stats) {
+						if (!error) {
+							pic.size = stats.size;
+							//pic.atime = stats.atimeMs;
+							pic.mtime = stats.mtimeMs;
+							//pic.ctime = stats.ctimeMs;
+							pic.birthtime = stats.birthtimeMs;
+						}
+						let pic_info = JSON.parse(JSON.stringify(pic));
+						delete pic_info.path;
+						http_return_json(200, pic_info);
+					});
+				}
+				/*
+				let pics_list = Object.keys(CACHE.pics),
+					quantity = 24,
+					random_pics = [];
+				if (quantity > pics_list.length) {
+					quantity = pics_list.length;
+				}
+				for (let i = 0; i < quantity; ++i) {
+					const pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
+					if (random_pics.includes(pic_id)) {
+						i--;
+					} else {
+						random_pics.push(pic_id);
+					}
+				}
+				let pics = [];
+				random_pics.forEach(function (pic_id) {
+					let pic = CACHE.pics[pic_id];
+					if (pic) {
+						if (pic.size) {
+							let pic_info = JSON.parse(JSON.stringify(pic));
+							delete pic_info.path;
+							pics.push(pic_info);
+						} else {
+							//console.log(`Getting stat of file ${pic.path}`);
+							fs.stat(pic.path, function (error, stats) {
+								if (!error) {
+									pic.size = stats.size;
+									//pic.atime = stats.atimeMs;
+									pic.mtime = stats.mtimeMs;
+									//pic.ctime = stats.ctimeMs;
+									pic.birthtime = stats.birthtimeMs;
+								}
+								let pic_info = JSON.parse(JSON.stringify(pic));
+								delete pic_info.path;
+								pics.push(pic_info);
+								if (pics.length === random_pics.length) {
+									http_return_json(200, { pics: pics });
+								}
+							});
+						}
+					}
+				});
+				if (pics.length === random_pics.length) {
+					http_return_json(200, { pics: pics });
+				}
+				*/
+			} else {
+				http_return_json(405);
+			}
+
+		} else if (request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/.+$/)) {
+
+			let tokens = request.url.match(/^\/api\/pic\/([0-9a-f]{32})\/(.+)$/),
+				pic_id = tokens && tokens[1] ? tokens[1] : null,
+				action = tokens && tokens[2] ? tokens[2] : null,
+				pic = CACHE.pics[pic_id];
+			if (!pic) {
+				http_return_json(404);
+				return;
+			}
+
+			if (action === 'info') {
+
+				if (request.method === 'GET') {
+					// GET /api/pic/<id>/info
+					// return info of pic <id>
+					if (pic.size) {
+						let pic_info = JSON.parse(JSON.stringify(pic));
+						delete pic_info.path;
+						http_return_json(200, pic_info);
+					} else {
+						//console.log(`Getting stat of file ${pic.path}`);
+						fs.stat(pic.path, function (error, stats) {
+							if (!error) {
+								pic.size = stats.size;
+								//pic.atime = stats.atimeMs;
+								pic.mtime = stats.mtimeMs;
+								//pic.ctime = stats.ctimeMs;
+								pic.birthtime = stats.birthtimeMs;
+							}
+							let pic_info = JSON.parse(JSON.stringify(pic));
+							delete pic_info.path;
+							http_return_json(200, pic_info);
+						});
+					}
+				} else {
+					http_return_json(405);
+				}
+
+			} else if (action === 'raw') {
+
+				if (request.method === 'GET') {
+					// GET /api/pic/<id>/raw
+					// return raw data file of pic <id>
+					http_return_file(200, pic.path);
+				} else {
+					http_return_json(405);
+				}
+
+			} else if (action === 'thumbnail') {
+
+				if (request.method === 'GET') {
+					// GET /api/pic/<id>/thumbnail
+					// return thumbnail data file of pic <id>
+					const thumb_dir_path = path.normalize(`${PICS_PATH}${path.sep}thumb`);
+					const thumbnail_path = path.normalize(`${thumb_dir_path}${path.sep}${pic.id}.jpeg`);
+					fs.access(thumbnail_path, fs.constants.F_OK, function (error) {
+						if (!error) {
+							http_return_file(200, thumbnail_path);
+						} else {
+							if (!FFMPEG_AVAILABLE) {
+								console.error(`Error: cannot access ${thumbnail_path}`, error);
+								http_return_json(404);
+							} else if (pic.ext === '.heic') {
+								http_return_json(404);
+							} else {
+								//console.log(`Generating thumbnail ${thumbnail_path}`);
+								/*
+								https://superuser.com/questions/538112/meaningful-thumbnails-for-a-video-using-ffmpeg
+								https://stackoverflow.com/questions/27145238/create-thumbnail-from-video-using-ffmpeg
+								https://superuser.com/questions/602315/ffmpeg-thumbnails-with-exact-size-main-aspect-ratio
+								https://stackoverflow.com/questions/15974243/resize-to-a-specific-width-and-height-using-ffmpeg
+								https://stackoverflow.com/questions/14551102/with-ffmpeg-create-thumbnails-proportional-to-the-videos-ratio/14551281
+								*/
+								//child_process.exec(`ffmpeg -hide_banner -loglevel error -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a)" -frames:v 1 "${thumbnail_path}"`, function (error) {
+								const is_video = ['.webm', '.flv', '.mp4', '.mpg', '.mpeg', '.mov', '.avi'].includes(pic.ext);
+								child_process.exec(`ffmpeg -hide_banner -loglevel error${is_video ? ' -ss 00:00:03 -noaccurate_seek' : ''} -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a),crop=150:150" -frames:v 1 "${thumbnail_path}"`, function (error, stdout, stderr) {
+									if (!error) {
+										http_return_file(200, thumbnail_path);
+									} else {
+										console.error(`Error: cannot create thumbnail`);
+										console.error(error);
+										console.error(stderr);
+										http_return_json(500);
+									}
+								});
+							}
+						}
+					});
+				} else {
+					http_return_json(405);
+				}
+
+			} else if (action === 'edit') {
+
+				if (request.method === 'POST') {
+					// POST /api/pic/<id>/edit
+					// edit pic <id>
+					let body = [];
+					request.on('data', function (chunk) {
+						body.push(chunk);
+					}).on('end', function () {
+						body = JSON.parse(Buffer.concat(body).toString());
+						const file_name = `${pic.id}${body.tags.length > 0 ? ` ${body.tags.sort(tag_sorting).join(' ')}` : ''}${pic.ext}`
+						if (file_name.length > 255) {
+							http_return_json(500);
+						} else if (file_name === path.basename(pic.path)) {
+							http_return_json(304);
+						} else {
+							const original_file_path = path.normalize(pic.path);
+							const new_file_path = path.normalize(`${path.dirname(pic.path)}${path.sep}${file_name}`);
+							fs.rename(original_file_path, new_file_path, function (error) {
+								if (error) {
+									console.error('Error renaming file', error);
+									http_return_json(500);
+								} else {
+									pic.path = new_file_path;
+									pic.tags = body.tags;
+									//console.log(`Renamed file ${original_file_path} -> ${new_file_path}`);
+									http_return_json(200);
+								}
+							});
+						}
+					});
+				} else {
+					http_return_json(405);
+				}
+
+			} else if (action === 'remove') {
+
+				if (request.method === 'POST') {
+					// POST /api/pic/<id>/remove
+					// delete pic <id>
+					const thumbnail_path = path.normalize(`${PICS_PATH}${path.sep}thumb${path.sep}${pic.id}.jpeg`);
+					fs.unlink(thumbnail_path, function (error) {
+						if (error) {
+							//console.error('Error unlinking file thumbnail', error);
+						}
+					});
+					fs.unlink(pic.path, function (error) {
+						if (error) {
+							console.error('Error unlinking file', error);
+							http_return_json(500);
+						} else {
+							delete CACHE.pics[pic_id];
+							http_return_json(200);
+						}
+					});
+				} else {
+					http_return_json(405);
+				}
+
+			}
+
+		} else if (request.url.match(/^\/api\/tag$/)) {
+
+			if (request.method === 'GET') {
+				// GET /api/tag
+				// return all tags info (without pics list, only count)
+				let map = {};
+				Object.keys(CACHE.pics).forEach(function (pic_id) {
+					let pic = CACHE.pics[pic_id];
+					if (pic.tags) {
+						pic.tags.forEach(function (tag_label) {
+							if (map[tag_label]) {
+								map[tag_label] += 1;
+							} else {
+								map[tag_label] = 1;
+							}
+						});
+					}
+				});
+				let tags = [];
+				Object.keys(map).forEach(function (tag_label) {
+					tags.push({
+						label: tag_label,
+						count: map[tag_label]
+					});
+				});
+				http_return_json(200, { tags: tags });
+			} else {
+				http_return_json(405);
+			}
+
+		} else if (request.url.match(/^\/api\/tag\/[\w\'\èéàùòì\.\-\(\)\?]+$/)) {
+
+			if (request.method === 'GET') {
+				// GET /api/tag/<tag_id>
+				// return tag info (with pics list)
+				let tokens = request.url.match(/^\/api\/tag\/([\w\'\èéàùòì\.\-\(\)\?]+)$/),
+					tag_label = tokens && tokens[1] ? tokens[1] : null;
+				if (!tag_label) {
+					http_return_json(404);
+				} else {
+					let filtered_pics = [];
+					Object.keys(CACHE.pics).forEach(function (pic_id) {
+						let pic = CACHE.pics[pic_id];
+						if (pic && pic.tags && pic.tags.includes(tag_label)) {
+							filtered_pics.push(pic);
+						}
+					});
+					if (filtered_pics.length === 0) {
+						http_return_json(404);
+					} else {
+						let tag_info = {
+							label: tag_label,
+							count: filtered_pics.length,
+							pics: []
+						};
+						filtered_pics.forEach(function (pic) {
+							if (pic.size) {
+								let pic_info = JSON.parse(JSON.stringify(pic));
+								delete pic_info.path;
+								tag_info.pics.push(pic_info);
+							} else {
+								//console.log(`Getting stat of file ${pic.path}`);
+								fs.stat(pic.path, function (error, stats) {
+									if (!error) {
+										pic.size = stats.size;
+										//pic.atime = stats.atimeMs;
+										pic.mtime = stats.mtimeMs;
+										//pic.ctime = stats.ctimeMs;
+										pic.birthtime = stats.birthtimeMs;
+									}
+									let pic_info = JSON.parse(JSON.stringify(pic));
+									delete pic_info.path;
+									tag_info.pics.push(pic_info);
+									if (tag_info.pics.length === filtered_pics.length) {
+										http_return_json(200, tag_info);
+									}
+								});
+							}
+						});
+						if (tag_info.pics.length === filtered_pics.length) {
+							http_return_json(200, tag_info);
+						}
+					}
+				}
+			} else {
+				http_return_json(405);
+			}
+
+		} else if (request.url.match(/^\/api\/rehash$/)) {
+
+			if (request.method === 'POST') {
+				// POST /api/rehash
+				// rehash and remix entire database
+				rehash(get_files_list());
+				CACHE = get_cache(get_files_list());
+				http_return_json(200);
+			} else {
+				http_return_json(405);
+			}
+
+		} else {
+			http_return_json(501);
+		}
+
+	} else {
+		http_return_json(501);
+	}
+});
+
+server.listen(PORT, HOSTNAME, () => {
+	console.log(`\nServer running at http://${HOSTNAME}:${PORT}/\nCTRL + C to shutdown\n`);
+});

@@ -5,9 +5,7 @@
 	<title>Piccolo</title>
 	<meta name="application-name" content="Piccolo">
 	<meta name="viewport" content="width=device-width">
-
-	<link rel="stylesheet" href="icons.css">
-
+	<link rel="stylesheet" href="/ui/icons.css">
 	<style type="text/css">
 		:root {
 			--color-1: #222;
@@ -291,44 +289,155 @@
 			color: rgb(109, 109, 109);
 		}
 
-		.header {
-			position: sticky;
+		.list {
+			display: block;
+			width: 100%;
+		}
+
+		.list > li {
+			display: block;
+			position: relative;
+			padding: 0.5rem 1rem;
+			width: 100%;
+			overflow: hidden;
+		}
+
+		.list > li > i:first-child {
+			margin-right: 1rem;
+			vertical-align: middle;
+		}
+
+		.list.list-divided > li:not(:last-of-type) {
+			border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		}
+
+		.list.list-bordered > li {
+			border: 1px solid rgba(255, 255, 255, 0.1);
+		}
+
+		.list.list-bordered > li:not(:first-child) {
+			border-top: none;
+		}
+
+		.list.list-striped > li:nth-child(even) {
+			background-color: rgba(255, 255, 255, 0.05);
+		}
+
+		.list.list-hover > li:hover {
+			cursor: pointer;
+			background-color: var(--color-3);
+			color: var(--color-1);
+		}
+
+		.error-message {
+			position: fixed;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 50%;
+			min-width: 320px;
+			max-width: 100%;
+			z-index: 200;
+			padding: 0.78571429rem 1.5rem 0.78571429rem;
+			background-color: #de6262;
+			color: #ffe8e6;
+		}
+
+		.splash {
+			position: fixed;
+			width: 100%;
+			height: 100%;
+			background-color: var(--color-1);
+			z-index: 100;
+		}
+
+		#splash-loading {
 			display: flex;
 			flex-flow: row nowrap;
+			justify-content: center;
 			align-items: center;
-			padding: 0.5rem;
-			z-index: 100;
-			/*border-bottom: 1px solid #404040;*/
+			align-content: center;
+		}
+
+		#splash-password {
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: center;
+			align-items: center;
+			align-content: center;
+		}
+
+		#piccolo-password {
+			width: 90%;
+			max-width: 800px;
+		}
+
+		.header {
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: center;
+			align-content: center;
 		}
 
 		.header-logo {
-			font-size: 1.2rem;
-			font-weight: bold;
-		}
-
-		.header-pages {
 			flex: 1;
-			text-align: center;
+			margin-left: 1rem;
 		}
 
-		.header-toolbar {
-			/* TODO */
+		.main {
+
 		}
 
 		.page {
-			padding: 0 1rem;
+
 		}
 
-		.pics-container {
-			/*overflow: auto;*/
+		.splash-pic-toolbar {
+			position: fixed;
+			width: 100%;
+			top: 0;
+			left: 0;
+			z-index: 101;
+			display: flex;
+			flex-flow: row nowrap;
+			justify-content: flex-start;
+			align-items: center;
+			align-content: center;
+			background-color: rgba(0, 0, 0, 0.5);
+		}
+
+		.splash-pic-dialog {
+			position: fixed;
+			width: 32rem;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			max-width: 90%;
+			max-height: 90%;
+			z-index: 101;
+			display: flex;
+			flex-flow: column nowrap;
+			justify-content: flex-start;
+			align-items: stretch;
+			align-content: stretch;
+			padding: 1rem;
+			background-color: var(--color-1);
+		}
+
+		.favorite-active {
+			color: gold !important;
+		}
+
+		.pic-preview-container {
 			display: flex;
 			flex-flow: row wrap;
-			align-content: flex-start;
-			align-items: flex-start;
 			justify-content: flex-start;
+			align-items: flex-start;
+			align-content: flex-start;
 		}
 
-		.pic {
+		.pic-preview {
 			position: relative;
 			width: 150px;
 			height: 150px;
@@ -338,33 +447,23 @@
 			overflow: hidden;
 		}
 
-		.pic-favorite {
-			position: absolute;
-			top: 12.5px;
-			left: -25px;
-			transform: rotate(-45deg);
-			width: 100px;
-			padding: 0.25rem;
-			font-size: 0.8rem;
-			text-align: center;
-			background-color: #e82;
-			z-index: 1;
-		}
-
 		@media (min-width: 320px) and (max-width: 480px) {
-			.pic {
+			.pic-preview {
 				width: 100px;
 				height: 100px;
 			}
 		}
 
-		.pic.pic-selected {
+		.pic-preview.pic-preview-selected {
 			border: 2px solid dodgerblue;
 		}
 
-		.pic-content > img,
-		.pic-content > canvas,
-		.pic-content > video {
+		.pic-preview > img,
+		.pic-preview > canvas,
+		.pic-preview > video,
+		.splash > img,
+		.splash > canvas,
+		.splash > video {
 			position: absolute;
 			top: 50%;
 			left: 50%;
@@ -373,208 +472,116 @@
 			max-height: 100%;
 		}
 
-		.page-preview {
-			height: calc(100vh - 60px);
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: stretch;
-			align-items: stretch;
-			align-content: stretch;
-		}
-
-		.preview-container {
-			position: relative;
-			flex: 1;
-		}
-
-		.preview-container > img,
-		.preview-container > video {
+		.pic-preview-tip {
 			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			max-width: 100%;
-			max-height: 100%;
+			bottom: 5%;
+			right: 5%;
+			font-size: 0.5rem;
+			z-index: 1;
 		}
 
-		.preview-toolbar {
-			padding: 1rem;
-			border-top: 1px solid #404040;
-			border-left: 1px solid #404040;
-			width: 300px;
+		#main-page-tags-filter {
+			display: block;
+			width: 90%;
+			max-width: 800px;
+			margin: 0 auto;
 		}
 
-		.preview-toolbar-actions {
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: space-between;
-			align-items: center;
-			align-content: center;
-		}
-
-		.preview-toolbar-tags {
-			margin-top: 0.5rem;
-		}
-
-		.tags-toolbar {
-			display: flex;
-			flex-flow: row nowrap;
-			align-content: center;
-			align-items: center;
-			justify-content: center;
-			width: 960px;
-			max-width: 95%;
-			margin: 1.2rem auto;
-		}
-
-		.tags-list {
-			padding: 1rem 2rem;
-		}
-
-		.tags-list-item {
-			margin: 0.5rem 0;
-			cursor: pointer;
-		}
-
-		.tags-list-item:hover {
-			color: dodgerblue;
-		}
-
-		.dialog {
-			position: fixed;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 30%;
-			min-width: 340px;
-			max-width: 95%;
-			height: auto;
-			max-height: 95%;
-			display: flex;
-			flex-flow: column nowrap;
-			justify-content: flex-start;
-			align-items: stretch;
-			align-content: stretch;
-			background: var(--color-1);
-			color: var(--color-3);
-			border: none;
-			border-top: 1px solid #ededed;
-			border-radius: 0.28571429rem;
-			box-shadow:
-				0px 11px 15px -7px rgba(0, 0, 0, 0.2),
-				0px 24px 38px 3px rgba(0, 0, 0, 0.14),
-				0px 9px 46px 8px rgba(0, 0, 0, 0.12);
-		}
-
-		.dialog-title {
-			padding: 1.2rem 1.2rem 0 1.2rem;
-			font-size: 1.28rem;
-			font-weight: bold;
-			/*
-			text-align: center;
-			padding: 1.2rem;
-			border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-			*/
-		}
-
-		.dialog-content {
-			padding: 1.2rem;
-			overflow: auto;
-		}
-
-		.dialog-loader {
-			text-align: center;
-			padding: 2rem 1.2rem;
-		}
-
-		.dialog-buttons {
-			padding: 1.2rem;
-			/*
-			background-color: rgba(0, 0, 0, 0.03);
-			border-top: 1px solid rgba(0, 0, 0, 0.05);
-			*/
-			display: flex;
-			flex-flow: row nowrap;
-			justify-content: flex-end;
-			align-items: center;
-			align-content: center;
-		}
-
-		.dialog-buttons > button {
-			margin: 0 0 0 0.6rem;
-		}
-
-		dialog::backdrop {
-			background: rgba(0, 0, 0, 0.5);
-		}
-
-		dialog + .backdrop {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background: rgba(0, 0, 0, 0.5);
+		#main-page-tags-list {
+			display: block;
+			width: 90%;
+			max-width: 800px;
+			margin: 0 auto;
 		}
 	</style>
 </head>
 <body>
-	<datalist id="datalist-tags"></datalist>
+	<input id="upload-input" type="file" hidden>
+
+	<div id="splash-loading" class="splash">
+		<p>Loading...</p>
+	</div>
+
+	<div id="splash-password" hidden class="splash">
+		<input id="piccolo-password" type="password" class="input">
+	</div>
+
+	<div id="splash-pic" hidden class="splash"></div>
 
 	<div class="header">
 		<div class="header-logo"><span style="color: orange">Pic</span><span style="color: dodgerblue">colo</span></div>
-		<div class="header-pages">
-			<button data-action="pics" title="Pics" class="button button-frameless">Home</button>
-			<button data-action="favorites" title="Favorites" class="button button-frameless">Favorites</button>
-			<button data-action="random" title="Random" class="button button-frameless">Random</button>
-			<button data-action="untagged" title="Untagged" class="button button-frameless">Untagged</button>
-			<button data-action="tags" title="Tags" class="button button-frameless">Tags</button>
-		</div>
-		<div class="header-toolbar">
-			<button data-action="upload" title="Upload" class="button button-icon button-frameless"><i class="icon-upload"></i></button>
-			<input id="upload-input" type="file" hidden>
-			<button data-action="rehash" title="Rehash" class="button button-icon button-frameless"><i class="icon-refresh"></i></button>
-		</div>
+		<button data-action="tags" title="Tags" class="button button-icon button-frameless"><i class="icon-search"></i></button>
+		<button data-action="random" title="Random" class="button button-icon button-frameless"><i class="icon-shuffle"></i></button>
+		<button data-action="upload" title="Upload" class="button button-icon button-frameless"><i class="icon-folder-upload"></i></button>
+		<button data-action="rehash" title="Rehash" class="button button-icon button-frameless"><i class="icon-database"></i></button>
 	</div>
-
-	<div id="page-pics" class="page">
-		<div style="width: 960px; max-width: 95%; margin: 1.2rem auto">
-			<input id="pics-search" type="search" list="datalist-tags" placeholder="Search..." class="input" style="width: 100%">
+	<div class="main">
+		<div id="main-page-pics" hidden class="page pic-preview-container"></div>
+		<div id="main-page-tags" hidden class="page">
+			<input id="main-page-tags-filter" type="search" class="input">
+			<ul id="main-page-tags-list" class="list list-hover"></ul>
 		</div>
-		<div class="pics-container"></div>
-	</div>
-
-	<div id="page-preview" class="page page-preview" style="display: none">
-		<div class="preview-container"></div>
-		<div class="preview-toolbar">
-			<div class="preview-toolbar-actions">
-				<button data-action="favorite" title="Favorite" class="button button-icon button-frameless"><i class="icon-star-empty"></i></button>
-				<button data-action="delete" title="Delete" class="button button-icon button-frameless"><i class="icon-delete"></i></button>
-				<button data-action="close" title="Close" class="button button-icon button-frameless"><i class="icon-close"></i></button>
-			</div>
-			<div class="preview-toolbar-tags">
-				<textarea id="preview-tags-edit" rows="10" class="input" style="width: 100%"></textarea>
-				<ul id="preview-tags-list" class="tags-list"></ul>
-			</div>
-		</div>
-	</div>
-
-	<div id="page-tags" class="page" style="display: none">
-		<div class="tags-toolbar">
-			<select id="tags-sorting" class="select" style="width: 250px">
-				<option value="alpha">Alphabetic Ascendant</option>
-				<option value="alpha-desc">Alphabetic Descendant</option>
-				<option value="count">Count Ascendant</option>
-				<option value="count-desc">Count Descendant</option>
-			</select>
-			<input id="tags-search" type="search" placeholder="Search..." class="input" style="flex: 1">
-		</div>
-		<ul id="tags-list" class="tags-list"></ul>
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
-	<script src="dialog-polyfill.js"></script>
 	<script type="text/javascript">
+		fetch('/api/auth', { method: 'GET' }).then(function (response) {
+			if (!response.ok) {
+				if (response.status === 401) {
+					$('#splash-loading').prop('hidden', true);
+					$('#splash-password').prop('hidden', false);
+				} else {
+					const error = `HTTP Error ${response.status}: ${response.statusText}`;
+					console.error(error);
+					error_message(error);
+				}
+			} else {
+				$('#splash-loading').prop('hidden', true);
+			}
+		});
+
+		$('#piccolo-password').on('keydown', function(e) {
+			if (e.which === 10 || e.which === 13) {
+				let password = $('#piccolo-password').val();
+				let authorization = `Basic ${btoa(`piccolo:${password}`)}`;
+				fetch('/api/auth', {
+					method: 'GET',
+					headers: { 'Authorization': authorization },
+				}).then(function (response) {
+					if (!response.ok) {
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						console.error(error);
+						error_message(error);
+						if (response.status === 401) {
+							$('#piccolo-password').val('');
+						}
+					} else {
+						window.authorization = authorization;
+						$('#piccolo-password').val('');
+						$('#splash-password').prop('hidden', true);
+					}
+				});
+			}
+		});
+
+		$('#main-page-tags-filter').on('input', function() {
+			let $filter = $(this),
+				pattern = $filter.val().toLowerCase().replace('_', ' '),
+				$list = $('#main-page-tags-list');
+			if (pattern === '') {
+				$list.find('li').prop('hidden', false);
+			} else {
+				$list.find('li').each(function () {
+					let $li = $(this),
+						tag = $li.data('tag');
+					if (tag.label.toLowerCase().replace('_', ' ').indexOf(pattern) !== -1) {
+						$li.prop('hidden', false);
+					} else {
+						$li.prop('hidden', true);
+					}
+				});
+			}
+		});
 
 		var observer = new IntersectionObserver(function (entries, self) {
 			entries.forEach(function (entry) {
@@ -583,7 +590,51 @@
 					setTimeout(function () {
 						if (entry.isIntersecting) {
 							// load image
-							render_pic(entry.target);
+							let $item = $(entry.target),
+								pic = $item.data('pic'),
+								thumbnail = new Image();
+							thumbnail.onload = function () {
+								$item.append(thumbnail);
+							};
+							thumbnail.onerror = function () {
+								let element;
+								if (['.gif'].includes(pic.ext)) {
+									element = document.createElement('canvas');
+									var context = element.getContext('2d'),
+										img = new Image();
+									img.onload = function () {
+										element.height = 100;
+										element.width = element.height * img.naturalWidth / img.naturalHeight;
+										context.drawImage(img, 0, 0, element.width, element.height);
+										$item.attr('title', get_pic_tooltip(pic, img.naturalWidth, img.naturalHeight));
+									};
+									img.src = `/api/pic/${pic.id}/raw`;
+								} else if (['.webm', '.flv', '.mp4', '.mpg', '.mpeg', '.mov', '.avi', '.heic'].includes(pic.ext)) {
+									element = document.createElement('video');
+									element.autoplay = false;
+									element.controls = false;
+									element.loop = true;
+									element.muted = true;
+									element.addEventListener('mouseover', function () {
+										element.play();
+									});
+									element.addEventListener('mouseout', function () {
+										element.pause();
+									});
+									element.addEventListener('loadedmetadata', function () {
+										$item.attr('title', get_pic_tooltip(pic, element.videoWidth, element.videoHeight));
+									});
+									element.src = `/api/pic/${pic.id}/raw`;
+								} else {
+									element = new Image();
+									element.onload = function () {
+										$item.attr('title', get_pic_tooltip(pic, element.naturalWidth, element.naturalHeight));
+									};
+									element.src = `/api/pic/${pic.id}/raw`;
+								}
+								$item.append(element);
+							};
+							thumbnail.src = `/api/pic/${pic.id}/thumbnail`;
 							// Stop watching and load the image
 							self.unobserve(entry.target);
 						}
@@ -591,323 +642,191 @@
 				}
 			});
 		}, {
-			rootMargin: '0px 0px 0px 0px',
+			rootMargin: '100px 0px 100px 0px',
 			threshold: 1
 		});
 
-		var open_dialog = function (settings) {
-			var dialog_id = `dialog-${Date.now()}`;
-			var $dialog = $(`<dialog id="${dialog_id}" class="dialog"></dialog>`);
-			if (settings.width) {
-				$dialog.width(settings.width);
+		var humanize_size = function (bytes, decimals = 2) {
+			if (bytes === 0) {
+				return '0 byte';
 			}
-			if (settings.height) {
-				$dialog.height(settings.height);
+			const k = 1024;
+			const dm = decimals < 0 ? 0 : decimals;
+			const sizes = ['byte', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+			const i = Math.floor(Math.log(bytes) / Math.log(k));
+			return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+		};
+
+		var humanize_time = function (milliseconds) {
+			function number_ending(number) {
+				return (number > 1) ? 's' : '';
 			}
-			if (settings.title) {
-				var $dialog_title = $('<h3 class="dialog-title"></h3>').text(settings.title);
-				$dialog.append($dialog_title);
+			let temp = Math.floor(milliseconds / 1000),
+				years = Math.floor(temp / 31536000);
+			if (years) {
+				return years + ' year' + number_ending(years);
 			}
-			if (settings.content) {
-				var $dialog_content = $('<div class="dialog-content"></div>').append(settings.content);
-				if (settings.height) {
-					$dialog_content.css({ flex: 1 });
+			//TODO: Months! Maybe weeks? 
+			let days = Math.floor((temp %= 31536000) / 86400);
+			if (days) {
+				return days + ' day' + number_ending(days);
+			}
+			let hours = Math.floor((temp %= 86400) / 3600);
+			if (hours) {
+				return hours + ' hour' + number_ending(hours);
+			}
+			let minutes = Math.floor((temp %= 3600) / 60);
+			if (minutes) {
+				return minutes + ' minute' + number_ending(minutes);
+			}
+			let seconds = temp % 60;
+			if (seconds) {
+				return seconds + ' second' + number_ending(seconds);
+			}
+			return 'less than a second'; // 'just now' or other string you like
+		};
+
+		var error_message = function (message) {
+			const $item = $('<div class="error-message"></div>').text(message || 'Error');
+			$('body').append($item);
+			setTimeout(function () {
+				$item.remove();
+			}, 4000);
+		};
+
+		var get_pic_tooltip = function (pic, width, height) {
+			let array = [];
+			array.push(`Type: ${pic.ext.substring(1).toUpperCase()}`);
+			if (pic.size) {
+				array.push(`Size: ${pic.size} byte (${humanize_size(pic.size)})`);
+			}
+			if (width && height) {
+				array.push(`Size: ${width}×${height}`);
+			}
+			array.push(`Tags: ${pic.tags.join(' ')}`);
+			return array.join('\n');
+		};
+
+		var random_pic = function () {
+			fetch('/api/pic/random', {
+				method: 'GET',
+				headers: window.authorization ? { 'Authorization': window.authorization } : undefined
+			}).then(function (response) {
+				if (!response.ok) {
+					const error = `HTTP Error ${response.status}: ${response.statusText}`;
+					console.error(error);
+					error_message(error);
 				}
-				$dialog.append($dialog_content);
-			}
-			var $dialog_buttons = $('<div class="dialog-buttons"></div>');
-			if (!settings.buttons) {
-				var $button = $('<button class="button button-primary">Close</button>');
-				$button.on('click', function () {
-					$dialog[0].close();
-					$dialog.remove();
-				});
-				$dialog_buttons.append($button);
-				$dialog.append($dialog_buttons);
-			} else if (settings.buttons.length > 0) {
-				settings.buttons.forEach(function (button) {
-					var $button = $(`<button${button.id ? ` id="${button.id}"` : ''} class="${button.class || 'button'}">${button.label}</button>`);
-					if (button.onclick) {
-						$button.on('click', function (e) {
-							button.onclick.call($dialog[0], e);
-						});
-					}
-					$dialog_buttons.append($button);
-				});
-				$dialog.append($dialog_buttons);
-			}
-			$('body').append($dialog);
-			var dialog = document.getElementById(dialog_id);
-			if (window.dialogPolyfill) {
-				dialogPolyfill.registerDialog(dialog);
-			}
-			dialog.addEventListener('close', function () {
-				$dialog.remove();
-			});
-			dialog.showModal();
-			return dialog;
-		};
-
-		var goto_page = function (id) {
-			$('.page').hide();
-			$('.preview-container').empty();
-			$(`#${id}`).show();
-		};
-
-		var get_tags_list = function () {
-			var $controls = $('.header-buttons').find('input, button');
-			$controls.prop('disabled', true);
-			return $.ajax({
-				type: 'GET',
-				url: '/tags',
-				dataType: 'json'
-			}).fail(function () {
-				console.error('get_tags_list', 'fail');
-				$controls.prop('disabled', false);
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				$controls.prop('disabled', false);
-				if (data.status !== 'ok') {
-					console.error('get_tags_list', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				} else {
-					var $datalist = $('#datalist-tags').empty().data('tags', data.tags);
-					data.tags.forEach(function (tag) {
-						$datalist.append(`<option value="${tag.label}"></option>`);
-					});
-					render_tags_list();
-				}
-			});
-		};
-
-		var render_tags_list = function (mode) {
-			let tags = $('#datalist-tags').data('tags');
-			if (!mode) {
-				mode = $('#tags-sorting').val();
-			}
-			if (mode === 'alpha') {
-				tags.sort(function (a, b) {
-					return a.label.toLowerCase() < b.label.toLowerCase() ? -1 : 1;
-				});
-			} else if (mode === 'alpha-desc') {
-				tags.sort(function (a, b) {
-					return a.label.toLowerCase() > b.label.toLowerCase() ? -1 : 1;
-				});
-			} else if (mode === 'count') {
-				tags.sort(function (a, b) {
-					return a.count < b.count ? -1 : 1;
-				});
-			} else if (mode === 'count-desc') {
-				tags.sort(function (a, b) {
-					return a.count > b.count ? -1 : 1;
-				});
-			}
-			var $list = $('#tags-list').empty();
-			tags.forEach(function (tag) {
-				var $li = $(`<li data-tag="${tag.label}" class="tags-list-item">${tag.label} (${tag.count})</li>`);
-				$list.append($li);
+				return response.json();
+			}).then(function (data) {
+				render_pic(data, true);
 				/*
-				var $pic = $(
-					`<div title="${tag.label}" class="pic">` +
-						'<div class="pic-content"></div>' +
-					'</div>');
-				$pic.data('pic', tag.cover);
-				$list.append($pic);
-				render_pic($pic);
+				$('.page').prop('hidden', true);
+				let $page_pics = $('#main-page-pics');
+				$page_pics.empty();
+				data.pics.sort(function (a, b) {
+					if (a.birthtime > b.birthtime) {
+						return -1;
+					} else if (a.birthtime < b.birthtime) {
+						return 1;
+					} else if (a.mtime > b.mtime) {
+						return -1;
+					} else if (a.mtime < b.mtime) {
+						return 1;
+					} else {
+						return 0;
+					}
+				}).forEach(function (pic) {
+					const $item = $(`<div data-action="pic" data-pic="${pic.id}" title="${get_pic_tooltip(pic)}" class="pic-preview"><div class="pic-preview-tip">${pic.ext.substring(1)}</div></div>`);
+					$item.data('pic', pic);
+					observer.observe($item[0]);
+					$page_pics.append($item);
+				});
+				$page_pics.data('pics', data.pics);
+				$page_pics.prop('hidden', false);
 				*/
 			});
-			var pattern = $('#tags-search').val();
-			filter_tags_list(pattern);
 		};
 
-		var filter_tags_list = function (pattern) {
-			$('#tags-list').find('li').each(function () {
-				var $this = $(this),
-					to_show = true;
-				if (pattern !== '') {
-					var search_string = $this.attr('data-tag').toLowerCase();
-					if (search_string.indexOf(pattern.toLowerCase()) === -1) {
-						to_show = false;
-					}
-				}
-				if (to_show) {
-					$this.show();
-				} else {
-					$this.hide();
-				}
-			});
-		};
-
-		var get_tag_pics_list = function (tag) {
-			var $controls = $('.header-buttons').find('input, button');
-			$controls.prop('disabled', true);
-			return $.ajax({
-				type: 'GET',
-				url: `/tags/${tag}`,
-				dataType: 'json'
-			}).fail(function () {
-				console.error('get_tag_pics_list', 'fail');
-				$controls.prop('disabled', false);
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				$controls.prop('disabled', false);
-				if (data.status !== 'ok') {
-					console.error('get_tag_pics_list', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				} else {
-					render_pics_list(data.pics);
-					goto_page('page-pics');
-				}
-			});
-		};
-
-		var get_random_pics_list = function () {
-			var $controls = $('.header-buttons').find('input, button');
-			$controls.prop('disabled', true);
-			return $.ajax({
-				type: 'GET',
-				url: '/pics/random',
-				dataType: 'json'
-			}).fail(function () {
-				console.error('get_random_pics_list', 'fail');
-				$controls.prop('disabled', false);
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				$controls.prop('disabled', false);
-				if (data.status !== 'ok') {
-					console.error('get_random_pics_list', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				} else {
-					render_pics_list(data.pics);
-					goto_page('page-pics');
-				}
-			});
-		};
-
-		var get_untagged_pics_list = function () {
-			var $controls = $('.header-buttons').find('input, button');
-			$controls.prop('disabled', true);
-			return $.ajax({
-				type: 'GET',
-				url: '/pics/untagged',
-				dataType: 'json'
-			}).fail(function () {
-				console.error('get_untagged_pics_list', 'fail');
-				$controls.prop('disabled', false);
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				$controls.prop('disabled', false);
-				if (data.status !== 'ok') {
-					console.error('get_untagged_pics_list', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				} else {
-					render_pics_list(data.pics);
-					goto_page('page-pics');
-				}
-			});
-		};
-
-		var render_pics_list = function (pics) {
-			var $container = $('.pics-container').empty();
-			if (pics) {
-				$container.data('pics', pics);
-			} else {
-				pics = $container.data('pics');
-			}
-			pics.forEach(function (pic) {
-				var $pic = $(
-					`<div title="${pic.tags.join(' ')}" class="pic">` +
-						(pic.tags.indexOf('favorite') !== -1 ? '<div class="pic-favorite">Favorite</div>' : '') +
-						'<div class="pic-content"></div>' +
-					'</div>');
-				$pic.data('pic', pic);
-				observer.observe($pic[0]);
-				$container.append($pic);
-			});
-		};
-
-		var render_pic = function (pic_element) {
-			var $pic = $(pic_element),
-				pic = $pic.data('pic'),
-				element;
-			if (['gif'].indexOf(pic.ext) !== -1) {
-				element = document.createElement('canvas');
-				var context = element.getContext('2d'),
-					img = new Image();
-				img.onload = function () {
-					element.height = 100;
-					element.width = element.height * img.naturalWidth / img.naturalHeight;
-					context.drawImage(img, 0, 0, element.width, element.height);
-					element.setAttribute('title', img.naturalWidth + 'x' + img.naturalHeight + ' ' + pic.tags.join(' '));
-				};
-				img.src = '/pics/' + encodeURIComponent(pic.id);
-			} else if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi', 'heic'].indexOf(pic.ext) !== -1) {
-				element = document.createElement('video');
-				element.autoplay = false;
-				element.controls = false;
-				element.loop = true;
-				element.muted = true;
-				element.addEventListener('mouseover', function () {
-					element.play();
-				});
-				element.addEventListener('mouseout', function () {
-					element.pause();
-				});
-				element.addEventListener('loadedmetadata', function () {
-					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-				});
-				element.src = '/pics/' + encodeURIComponent(pic.id);
-			} else {
-				element = new Image();
-				element.setAttribute('loading', 'lazy');
-				element.onload = function () {
-					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-				};
-				element.src = '/pics/' + encodeURIComponent(pic.id);
-			}
-			$pic.find('.pic-content').append(element);
-		};
-
-		var preview_render_pic = function (pic) {
-			$('.pic').removeClass('pic-selected');
-			var $preview = $('#page-preview'),
-				$preview_container = $preview.find('.preview-container').empty();
-			$preview.data('pic', pic);
-			var $favorite_icon = $preview.find('[data-action="favorite"]').find('i');
-			if (pic.tags.indexOf('favorite') === -1) {
-				$favorite_icon.removeClass('icon-star-full').addClass('icon-star-empty').css({ color: '' });
-			} else {
-				$favorite_icon.removeClass('icon-star-empty').addClass('icon-star-full').css({ color: 'orange' });
-			}
-			$preview.find('[data-action="delete"]').removeClass('button-danger');
-			$preview.find('#preview-tags-edit').val(pic.tags.join('\n'));
-			let $list = $('#preview-tags-list').empty();
-			pic.tags.forEach(function (tag_label) {
-				var $li = $(`<li data-tag="${tag_label}" class="tags-list-item">${tag_label}</li>`);
-				$list.append($li);
-			});
-			var element;
-			if (['webm', 'flv', 'mp4', 'mpg', 'mpeg', 'mov', 'avi'].indexOf(pic.ext) !== -1) {
+		var render_pic = function (pic, random_mode) {
+			//console.log(pic);
+			let $splash_pic = $('#splash-pic');
+			$splash_pic.empty();
+			$splash_pic.prop('hidden', false);
+			$splash_pic.data('pic', pic);
+			$splash_pic.data('random_mode', random_mode || false);
+			let element
+			if (['.webm', '.flv', '.mp4', '.mpg', '.mpeg', '.mov', '.avi', '.heic'].includes(pic.ext)) {
 				element = document.createElement('video');
 				element.autoplay = true;
 				element.controls = true;
 				element.loop = true;
 				element.muted = false;
 				element.addEventListener('loadedmetadata', function () {
-					element.setAttribute('title', element.videoWidth + 'x' + element.videoHeight + ' ' + pic.tags.join(' '));
-					$preview_container.append(element);
+					element.setAttribute('title', get_pic_tooltip(pic, element.videoWidth, element.videoHeight));
 				});
-				element.src = '/pics/' + encodeURIComponent(pic.id);
+				element.src = `/api/pic/${pic.id}/raw`;
+				$splash_pic.append(element);
 			} else {
 				element = new Image();
 				element.onload = function () {
-					element.setAttribute('title', element.naturalWidth + 'x' + element.naturalHeight + ' ' + pic.tags.join(' '));
-					$preview_container.append(element);
+					element.setAttribute('title', get_pic_tooltip(pic, element.naturalWidth, element.naturalHeight));
 				};
-				element.src = '/pics/' + encodeURIComponent(pic.id);
+				element.src = `/api/pic/${pic.id}/raw`;
+			}
+			$splash_pic.append(element);
+			$splash_pic.append(
+				'<div class="splash-pic-toolbar">' +
+					'<button data-action="pic-close" title="Close" class="button button-icon button-frameless"><i class="icon-cross"></i></button>' +
+					'<div style="flex: 1">&nbsp;</div>' +
+					'<button data-action="pic-remove" title="Close" class="button button-icon button-frameless"><i class="icon-bin2"></i></button>' +
+					'<button data-action="pic-edit" title="Tags" class="button button-icon button-frameless"><i class="icon-price-tags"></i></button>' +
+					`<button data-action="pic-favorite" title="Close" class="button button-icon button-frameless${pic.tags.includes('favorite') ? ' favorite-active' : ''}"><i class="icon-star-full"></i></button>` +
+				'</div>');
+		};
+
+		var delete_pic = function (pic) {
+			if (confirm('Are you sure to delete this image?')) {
+				fetch(`/api/pic/${pic.id}/remove`, {
+					method: 'POST',
+					headers: window.authorization ? { 'Authorization': window.authorization } : undefined
+				}).then(function (response) {
+					if (!response.ok) {
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						console.error(error);
+						error_message(error);
+					}
+					let $splash_pic = $('#splash-pic');
+					if ($splash_pic.data('random_mode')) {
+						random_pic();
+					} else {
+						$(`[data-pic="${pic.id}"]`).remove();
+						const current_pic = $splash_pic.data('pic');
+						const pics_list = $('#main-page-pics').data('pics');
+						if (current_pic && pics_list) {
+							let next_pic;
+							for (let i = 0; i < pics_list.length; ++i) {
+								if (pics_list[i].id === current_pic.id) {
+									if (pics_list[i + 1]) {
+										next_pic = pics_list[i + 1];
+									}
+									pics_list.splice(i, 1);
+									break;
+								}
+							}
+							if (next_pic) {
+								render_pic(next_pic);
+							} else {
+								$splash_pic.prop('hidden', true);
+								$splash_pic.empty();
+							}
+						}
+					}
+				});
 			}
 		};
 
+		/*
 		var upload_file = function (file) {
 			let reader = new FileReader();
 			reader.onabort = function (event) {
@@ -937,244 +856,352 @@
 			};
 			reader.readAsArrayBuffer(file);
 		};
+		*/
 
-		var execute_rehash = function () {
-			var $controls = $('.header-buttons').find('input, button');
-			$controls.prop('disabled', true);
-			return $.ajax({
-				type: 'GET',
-				url: '/pics/rehash',
-				dataType: 'json'
-			}).fail(function () {
-				console.error('execute_rehash', 'fail');
-				$controls.prop('disabled', false);
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				$controls.prop('disabled', false);
-				if (data.status !== 'ok') {
-					console.error('execute_rehash', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				} else {
-					open_dialog({ title: 'Rehash Completed', content: 'Rehash has been completed successfully.' });
-				}
-				get_tags_list();
+		/*
+		var render_tags_list = function (mode) {
+			let tags = $('#datalist-tags').data('tags');
+			if (!mode) {
+				mode = $('#tags-sorting').val();
+			}
+			if (mode === 'alpha') {
+				tags.sort(function (a, b) {
+					return a.label.toLowerCase() < b.label.toLowerCase() ? -1 : 1;
+				});
+			} else if (mode === 'alpha-desc') {
+				tags.sort(function (a, b) {
+					return a.label.toLowerCase() > b.label.toLowerCase() ? -1 : 1;
+				});
+			} else if (mode === 'count') {
+				tags.sort(function (a, b) {
+					return a.count < b.count ? -1 : 1;
+				});
+			} else if (mode === 'count-desc') {
+				tags.sort(function (a, b) {
+					return a.count > b.count ? -1 : 1;
+				});
+			}
+			var $list = $('#tags-list').empty();
+			tags.forEach(function (tag) {
+				var $li = $(`<li data-tag="${tag.label}" class="tags-list-item">${tag.label} (${tag.count})</li>`);
+				$list.append($li);
 			});
+			var pattern = $('#tags-search').val();
+			filter_tags_list(pattern);
 		};
+		*/
 
-		var edit_pic = function (pic, tags) {
-			return $.ajax({
-				type: 'GET',
-				url: `/pics/${pic.id}/edit?tags=${encodeURIComponent(JSON.stringify(tags))}`,
-				dataType: 'json'
-			}).fail(function () {
-				console.error('edit_pic', 'fail');
-				open_dialog({ title: 'Error', content: 'Request Failed.' });
-			}).done(function (data) {
-				if (data.status !== 'ok') {
-					console.error('edit_pic', data.status, data.error);
-					open_dialog({ title: 'Error', content: `status = ${data.status}, error = ${data.error}` });
-				}
-				render_pics_list();
-				get_tags_list();
-			});
-		};
+		$('body').on('click', '[data-action]', function () {
+			let $this = $(this),
+				action = $this.attr('data-action');
+			if (action === 'random') {
 
-		var remove_pic = function (pic) {
-			$.ajax({
-				type: 'GET',
-				url: `/pics/${pic.id}/remove`,
-				dataType: 'json'
-			}).fail(function () {
-				console.error('remove_pic', 'fail');
-			}).done(function (data) {
-				if (data.status !== 'ok') {
-					console.error('remove_pic', data.status, data.error);
-				} else {
-					let pics = $('.pics-container').data('pics');
-					if (pics) {
-						for (var i = 0; i < pics.length; ++i) {
-							var pic_id = pics[i].id;
-							if (pic_id === pic.id) {
-								pics.splice(i, 1);
-								i--;
-								break;
-							}
-						}
-					}
-				}
-				render_pics_list();
-				get_tags_list();
-			});
-		};
+				random_pic();
 
-		$('.header').on('click', '[data-action]', function () {
-			var action = $(this).data('action');
-			if (action === 'pics') {
-				goto_page('page-pics');
-			} else if (action === 'favorites') {
-				get_tag_pics_list('favorite');
-			} else if (action === 'random') {
-				get_random_pics_list();
-			} else if (action === 'untagged') {
-				get_untagged_pics_list();
-			} else if (action === 'tags') {
-				goto_page('page-tags');
 			} else if (action === 'upload') {
-				$('#upload-input').click();
-			} else if (action === 'rehash') {
-				var r = confirm('Execute reshash?');
-				if (r) {
-					execute_rehash();
-				}
-			}
-		});
 
-		$('#upload-input').on('change', function () {
-			var file = this.files[0];
-			this.value = null;
-			upload_file(file);
-		});
+				alert('TODO');
 
-		$('#pics-search').on('change', function () {
-			var pattern = $(this).val().trim();
-			if (pattern === '') {
-				return;
-			}
-			get_tag_pics_list(pattern.trim());
-		});
+			} else if (action === 'tags') {
 
+				$('.page').prop('hidden', true);
+				let $page_tags = $('#main-page-tags'),
+					$list = $('#main-page-tags-list').empty();
+				fetch('/api/tag', {
+					method: 'GET',
+					headers: window.authorization ? { 'Authorization': window.authorization } : undefined
+				}).then(function (response) {
+					if (!response.ok) {
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						console.error(error);
+						error_message(error);
+					}
+					return response.json();
+				}).then(function (data) {
+					data.tags.sort(function (a, b) {
+						return a.count > b.count ? -1 : 1;
+					}).forEach(function (tag) {
+						let $item = $(`<li data-action="tag" data-tag="${tag.label}">${tag.label} (${tag.count})</li>`);
+						$item.data('tag', tag);
+						$list.append($item);
+					});
+					$('#main-page-tags-filter').trigger('input');
+					$page_tags.prop('hidden', false);
+				});
 
-		$('.pics-container').on('click', '.pic', function () {
-			var $pic = $(this);
-			$pic.toggleClass('pic-selected');
-		}).on('dblclick', '.pic', function () {
-			var $pic = $(this);
-			var pic = $pic.data('pic');
-			goto_page('page-preview');
-			preview_render_pic(pic);
-		});
+			} else if (action === 'tag') {
 
-		$('.preview-toolbar').on('click', '[data-action]', function () {
-			var pic = $('#page-preview').data('pic'),
-				action = $(this).data('action');
-			if (!pic) {
-				return;
-			}
-			if (action === 'close') {
-				goto_page('page-pics');
-			} else if (action === 'favorite') {
-				var star_index = pic.tags.indexOf('favorite');
-				if (star_index === -1) {
-					pic.tags.push('favorite');
-				} else {
-					pic.tags.splice(star_index, 1);
-				}
-				edit_pic(pic, pic.tags);
-				preview_render_pic(pic);
-			} else if (action === 'delete') {
-				var $button = $(this);
-				if (!$button.hasClass('button-danger')) {
-					$button.addClass('button-danger');
-				} else {
-					remove_pic(pic);
-					let pics = $('.pics-container').data('pics'),
-						current_pic = $('#page-preview').data('pic');
-					if (current_pic && pics) {
-						let next_pic;
-						for (var i = 0; i < pics.length; ++i) {
-							if (pics[i].id === current_pic.id) {
-								if (pics[i + 1]) {
-									next_pic = pics[i + 1];
-								}
-								break;
-							}
-						}
-						if (next_pic) {
-							preview_render_pic(next_pic);
+				$('.page').prop('hidden', true);
+				const $page_pics = $('#main-page-pics');
+				const tag_label = $this.attr('data-tag');
+				$page_pics.empty();
+				fetch(`/api/tag/${tag_label}`, {
+					method: 'GET',
+					headers: window.authorization ? { 'Authorization': window.authorization } : undefined
+				}).then(function (response) {
+					if (!response.ok) {
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						console.error(error);
+						error_message(error);
+					}
+					return response.json();
+				}).then(function (data) {
+					data.pics.sort(function (a, b) {
+						if (a.birthtime > b.birthtime) {
+							return -1;
+						} else if (a.birthtime < b.birthtime) {
+							return 1;
+						} else if (a.mtime > b.mtime) {
+							return -1;
+						} else if (a.mtime < b.mtime) {
+							return 1;
 						} else {
-							goto_page('page-pics');
+							return 0;
+						}
+					}).forEach(function (pic) {
+						const $item = $(`<div data-action="pic" data-pic="${pic.id}" title="${get_pic_tooltip(pic)}" class="pic-preview"><div class="pic-preview-tip">${pic.ext.substring(1)}</div></div>`);
+						$item.data('pic', pic);
+						observer.observe($item[0]);
+						$page_pics.append($item);
+					});
+					$page_pics.data('pics', data.pics);
+					$page_pics.prop('hidden', false);
+				});
+
+			} else if (action === 'pic') {
+
+				const pic = $this.data('pic');
+				render_pic(pic);
+
+			} else if (action === 'rehash') {
+
+				if (confirm('Are you sure to start database refactoring?')) {
+					const $splash_loading = $('#splash-loading');
+					$splash_loading.prop('hidden', false);
+					fetch(`/api/rehash`, {
+						method: 'POST',
+						headers: window.authorization ? { 'Authorization': window.authorization } : undefined
+					}).then(function (response) {
+						if (!response.ok) {
+							const error = `HTTP Error ${response.status}: ${response.statusText}`;
+							console.error(error);
+							error_message(error);
+						}
+						$splash_loading.prop('hidden', true);
+					});
+				}
+
+			} else if (action === 'pic-close') {
+
+				const $splash_pic = $('#splash-pic');
+				$splash_pic.prop('hidden', true);
+				$splash_pic.empty();
+
+			} else if (action === 'pic-remove') {
+
+				const $splash_pic = $('#splash-pic');
+				const pic = $splash_pic.data('pic');
+				delete_pic(pic);
+
+			} else if (action === 'pic-favorite') {
+
+				const $splash_pic = $('#splash-pic');
+				const pic = $splash_pic.data('pic');
+				if ($this.hasClass('favorite-active')) {
+					pic.tags.splice(pic.tags.indexOf('favorite'), 1);
+				} else {
+					pic.tags.push('favorite');
+				}
+				fetch(`/api/pic/${pic.id}/edit`, {
+					method: 'POST',
+					headers: window.authorization ? { 'Authorization': window.authorization } : undefined,
+					body: JSON.stringify({ tags: pic.tags })
+				}).then(function (response) {
+					if (!response.ok) {
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						console.error(error);
+						error_message(error);
+					} else {
+						render_pic(pic, $splash_pic.data('random_mode'));
+					}
+				});
+
+			} else if (action === 'pic-edit') {
+
+				const $splash_pic = $('#splash-pic');
+				const $dialog = $splash_pic.find('.splash-pic-dialog');
+				if ($dialog.length > 0) {
+					$dialog.remove()
+				} else {
+					const pic = $splash_pic.data('pic');
+					const $dialog = $(
+						'<div class="splash-pic-dialog"><textarea rows="10" class="input"></textarea></div>');
+					$dialog.find('textarea').val(pic.tags.join('\r\n')).on('change', function () {
+						pic.tags = [];
+						$(this).val().split(/\r\n|\r|\n/).forEach(function (row) {
+							const tag = row.trim()
+								.replace(' ', '_')
+								.replace('è', 'e')
+								.replace('é', 'e')
+								.replace('à', 'a')
+								.replace('ù', 'u')
+								.replace('ò', 'o')
+								.replace('ì', 'i');
+							if (tag !== '') {
+								pic.tags.push(tag);
+							}
+						});
+						fetch(`/api/pic/${pic.id}/edit`, {
+							method: 'POST',
+							headers: window.authorization ? { 'Authorization': window.authorization } : undefined,
+							body: JSON.stringify({ tags: pic.tags })
+						}).then(function (response) {
+							if (!response.ok) {
+								const error = `HTTP Error ${response.status}: ${response.statusText}`;
+								console.error(error);
+								error_message(error);
+							} else {
+								render_pic(pic, $splash_pic.data('random_mode'));
+							}
+						});
+					});
+					$splash_pic.append($dialog);
+				}
+
+			}
+		});
+
+		var get_previous_pic = function (pic) {
+			const pics_list = $('#main-page-pics').data('pics');
+			if (pic && pics_list) {
+				for (let i = 0; i < pics_list.length; ++i) {
+					if (pics_list[i].id === pic.id) {
+						if (pics_list[i - 1]) {
+							return pics_list[i - 1];
+						}
+						break;
+					}
+				}
+			}
+			return null;
+		};
+
+		var get_next_pic = function (pic) {
+			const pics_list = $('#main-page-pics').data('pics');
+			if (pic && pics_list) {
+				for (let i = 0; i < pics_list.length; ++i) {
+					if (pics_list[i].id === pic.id) {
+						if (pics_list[i + 1]) {
+							return pics_list[i + 1];
 						}
 					}
 				}
-			} else if (action === 'tag') {
-				var tag = $(this).data('tag');
-				$('#header-search').val(tag).trigger('change');
 			}
-		});
-
-		$('#preview-tags-edit').on('change', function () {
-			let pic = $('#page-preview').data('pic');
-			pic.tags = [];
-			$(this).val().split(/\r\n|\r|\n/).forEach(function (row) {
-				let tag = row.trim();
-				if (tag !== '') {
-					pic.tags.push(tag);
-				}
-			});
-			edit_pic(pic, pic.tags);
-			preview_render_pic(pic);
-		});
+			return null;
+		};
 
 		document.addEventListener('keyup', function (event) {
-			var $preview = $('#page-preview');
-			if ($(event.target).hasClass('input') || $preview.css('display') === 'none') {
+			if ($(event.target).hasClass('input')) {
+				return;
+			}
+			const $splash_pic = $('#splash-pic');
+			if ($splash_pic.prop('hidden')) {
 				return;
 			}
 			if (event.key === 'ArrowLeft') {
-				var current_pic = $preview.data('pic'),
-					pics_list = $('.pics-container').data('pics');
-				if (current_pic && pics_list) {
-					var previous_pic;
-					for (var i = 0; i < pics_list.length; ++i) {
-						if (pics_list[i].id === current_pic.id) {
-							if (pics_list[i - 1]) {
-								previous_pic = pics_list[i - 1];
-							}
-							break;
-						}
-					}
+
+				if (!$splash_pic.data('random_mode')) {
+					const previous_pic = get_previous_pic($splash_pic.data('pic'));
 					if (previous_pic) {
-						preview_render_pic(previous_pic);
+						render_pic(previous_pic);
 					}
 				}
+
 			} else if (event.key === 'ArrowRight') {
-				var current_pic = $preview.data('pic'),
-					pics_list = $('.pics-container').data('pics');
-				if (current_pic && pics_list) {
-					var next_pic;
-					for (var i = 0; i < pics_list.length; ++i) {
-						if (pics_list[i].id === current_pic.id) {
-							if (pics_list[i + 1]) {
-								next_pic = pics_list[i + 1];
-							}
-							break;
-						}
-					}
+
+				if ($splash_pic.data('random_mode')) {
+					random_pic();
+				} else {
+					const next_pic = get_next_pic($splash_pic.data('pic'));
 					if (next_pic) {
-						preview_render_pic(next_pic);
+						render_pic(next_pic);
 					}
 				}
+
 			} else if (event.key === 'Escape') {
-				goto_page('page-pics');
+
+				$splash_pic.prop('hidden', true);
+				$splash_pic.empty();
+
+			} else if (event.key === 'Backspace' || event.key === 'Delete')  {
+
+				const pic = $splash_pic.data('pic');
+				delete_pic(pic);
+
+			} else {
+
+				//console.log('keyup', event.key);
+
 			}
 		}, false);
 
-		$('#tags-sorting').on('change', function () {
-			var sorting = $(this).val();
-			render_tags_list(sorting);
+		let SWIPE_START = null;
+		$('#splash-pic').on('pointerdown', function (e) {
+			if (e.originalEvent) {
+				e = e.originalEvent;
+			}
+			if ($(event.target).hasClass('input')) {
+				return;
+			}
+			SWIPE_START = e.pageX;
+		}).on('pointermove', function (e) {
+			if (e.originalEvent) {
+				e = e.originalEvent;
+			}
+			if (SWIPE_START) {
+				let direction = SWIPE_START > e.pageX ? 'left' : 'right',
+					delta = Math.abs(SWIPE_START - e.pageX);
+				if (direction === 'left' && delta > 100) {
+					SWIPE_START = null;
+					const $splash_pic = $('#splash-pic');
+					if ($splash_pic.data('random_mode')) {
+						random_pic();
+					} else {
+						const next_pic = get_next_pic($splash_pic.data('pic'));
+						if (next_pic) {
+							render_pic(next_pic);
+						}
+					}
+				} else if (direction === 'right' && delta > 100) {
+					SWIPE_START = null;
+					const $splash_pic = $('#splash-pic');
+					if (!$splash_pic.data('random_mode')) {
+						const previous_pic = get_previous_pic($('#splash-pic').data('pic'));
+						if (previous_pic) {
+							render_pic(previous_pic);
+						}
+					}
+				}
+			}
+		}).on('pointerup pointercancel', function (e) {
+			SWIPE_START = null;
 		});
 
-		$('#tags-search').on('input', function () {
-			var pattern = $(this).val();
-			filter_tags_list(pattern);
-		});
-
-		$('.tags-list').on('click', 'li', function () {
-			var tag = $(this).data('tag');
-			$('#pics-search').val(tag).trigger('change');
-		});
-
-		get_tags_list();
+		/*
+		document.addEventListener('deviceready', function () {
+			document.addEventListener('backbutton', function (e) {
+				let $splash_pic = $('#splash-pic');
+				$splash_pic.prop('hidden', true);
+				$splash_pic.empty();
+				e.preventDefault();
+			}, false);
+		}, false);
+		window.addEventListener('hashchange', function() {
+			let $splash_pic = $('#splash-pic');
+			$splash_pic.prop('hidden', true);
+			$splash_pic.empty();
+		}, false);
+		*/
 	</script>
 </body>
 </html>
