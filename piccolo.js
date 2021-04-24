@@ -215,7 +215,7 @@ var get_files_list = function () {
 };
 
 var get_cache = function (files_list) {
-	let cache = { pics: {} };
+	let cache = new Map();
 	let count_cached = 0;
 	let count_skipped = 0;
 	files_list.forEach(function (file_path) {
@@ -234,7 +234,7 @@ var get_cache = function (files_list) {
 				tags: tokens,
 				ext: pic_ext
 			};
-			cache.pics[info.id] = info;
+			cache.set(info.id, info);
 			process.stdout.clearLine();
 			process.stdout.cursorTo(0);
 			process.stdout.write(`Cached file ${++count_cached} / ${files_list.length}`);
@@ -341,6 +341,7 @@ try {
 	fs.mkdirSync(path.resolve(PICS_PATH, 'thumb'), { recursive: true });
 }
 var CACHE = get_cache(get_files_list());
+var RANDOM_CACHE = new Set();
 
 /*
 fs.writeFile('/tmp/piccolo.cache', JSON.stringify(CACHE), function (error) {
@@ -479,13 +480,16 @@ const server = http.createServer(function (request, response) {
 
 		} else if (request.url.match(/^\/api\/pic\/random$/)) {
 
-			if (request.method === 'GET') {
-				// GET /api/pic/random
-				// return info for all pics
+			// /api/pic/random
 
-				const pics_list = Object.keys(CACHE.pics);
-				const pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
-				const pic = CACHE.pics[pic_id];
+			if (request.method === 'GET') {
+				const pics_list = Array.from(CACHE.keys());
+				let pic_id = null;
+				while (!pic_id || RANDOM_CACHE.has(pic_id)) {
+					pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
+				}
+				RANDOM_CACHE.add(pic_id);
+				const pic = CACHE.get(pic_id);
 				if (pic.size) {
 					let pic_info = JSON.parse(JSON.stringify(pic));
 					delete pic_info.path;
@@ -505,209 +509,160 @@ const server = http.createServer(function (request, response) {
 						http_return_json(200, pic_info);
 					});
 				}
-				/*
-				let pics_list = Object.keys(CACHE.pics),
-					quantity = 24,
-					random_pics = [];
-				if (quantity > pics_list.length) {
-					quantity = pics_list.length;
-				}
-				for (let i = 0; i < quantity; ++i) {
-					const pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
-					if (random_pics.includes(pic_id)) {
-						i--;
-					} else {
-						random_pics.push(pic_id);
-					}
-				}
-				let pics = [];
-				random_pics.forEach(function (pic_id) {
-					let pic = CACHE.pics[pic_id];
-					if (pic) {
-						if (pic.size) {
-							let pic_info = JSON.parse(JSON.stringify(pic));
-							delete pic_info.path;
-							pics.push(pic_info);
-						} else {
-							//console.log(`Getting stat of file ${pic.path}`);
-							fs.stat(pic.path, function (error, stats) {
-								if (!error) {
-									pic.size = stats.size;
-									//pic.atime = stats.atimeMs;
-									pic.mtime = stats.mtimeMs;
-									//pic.ctime = stats.ctimeMs;
-									pic.birthtime = stats.birthtimeMs;
-								}
-								let pic_info = JSON.parse(JSON.stringify(pic));
-								delete pic_info.path;
-								pics.push(pic_info);
-								if (pics.length === random_pics.length) {
-									http_return_json(200, { pics: pics });
-								}
-							});
-						}
-					}
-				});
-				if (pics.length === random_pics.length) {
-					http_return_json(200, { pics: pics });
-				}
-				*/
 			} else {
 				http_return_json(405);
 			}
 
-		} else if (request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/.+$/)) {
+		} else if (request.url.match(/^\/api\/pic\/[0-9a-f]{32}$/)) {
 
-			let tokens = request.url.match(/^\/api\/pic\/([0-9a-f]{32})\/(.+)$/),
+			// /api/pic/<id>
+
+			let tokens = request.url.match(/^\/api\/pic\/([0-9a-f]{32})$/),
 				pic_id = tokens && tokens[1] ? tokens[1] : null,
-				action = tokens && tokens[2] ? tokens[2] : null,
-				pic = CACHE.pics[pic_id];
+				pic = CACHE.get(pic_id);
 			if (!pic) {
 				http_return_json(404);
 				return;
 			}
 
-			if (action === 'info') {
-
-				if (request.method === 'GET') {
-					// GET /api/pic/<id>/info
-					// return info of pic <id>
-					if (pic.size) {
+			if (request.method === 'GET') {
+				if (pic.size) {
+					let pic_info = JSON.parse(JSON.stringify(pic));
+					delete pic_info.path;
+					http_return_json(200, pic_info);
+				} else {
+					//console.log(`Getting stat of file ${pic.path}`);
+					fs.stat(pic.path, function (error, stats) {
+						if (!error) {
+							pic.size = stats.size;
+							//pic.atime = stats.atimeMs;
+							pic.mtime = stats.mtimeMs;
+							//pic.ctime = stats.ctimeMs;
+							pic.birthtime = stats.birthtimeMs;
+						}
 						let pic_info = JSON.parse(JSON.stringify(pic));
 						delete pic_info.path;
 						http_return_json(200, pic_info);
+					});
+				}
+			} else if (request.method === 'POST') {
+				let body = [];
+				request.on('data', function (chunk) {
+					body.push(chunk);
+				}).on('end', function () {
+					body = JSON.parse(Buffer.concat(body).toString());
+					const file_name = `${pic.id}${body.tags.length > 0 ? ` ${body.tags.sort(tag_sorting).join(' ')}` : ''}${pic.ext}`
+					if (file_name.length > 255) {
+						http_return_json(500);
+					} else if (file_name === path.basename(pic.path)) {
+						http_return_json(304);
 					} else {
-						//console.log(`Getting stat of file ${pic.path}`);
-						fs.stat(pic.path, function (error, stats) {
-							if (!error) {
-								pic.size = stats.size;
-								//pic.atime = stats.atimeMs;
-								pic.mtime = stats.mtimeMs;
-								//pic.ctime = stats.ctimeMs;
-								pic.birthtime = stats.birthtimeMs;
+						const original_file_path = path.normalize(pic.path);
+						const new_file_path = path.resolve(path.dirname(pic.path), file_name);
+						fs.rename(original_file_path, new_file_path, function (error) {
+							if (error) {
+								console.error('Error renaming file', error);
+								http_return_json(500);
+							} else {
+								pic.path = new_file_path;
+								pic.tags = body.tags;
+								//console.log(`Renamed file ${original_file_path} -> ${new_file_path}`);
+								http_return_json(200);
 							}
-							let pic_info = JSON.parse(JSON.stringify(pic));
-							delete pic_info.path;
-							http_return_json(200, pic_info);
 						});
 					}
-				} else {
-					http_return_json(405);
+				});
+			} else if (request.method === 'DELETE') {
+				if (RANDOM_CACHE.has(pic.id)) {
+					RANDOM_CACHE.delete(pic.id);
 				}
+				const thumbnail_path = path.resolve(PICS_PATH, 'thumb', `${pic.id}.jpeg`);
+				fs.unlink(thumbnail_path, function (error) {
+					if (error) {
+						//console.error('Error unlinking file thumbnail', error);
+					}
+				});
+				fs.unlink(pic.path, function (error) {
+					if (error) {
+						console.error('Error unlinking file', error);
+						http_return_json(500);
+					} else {
+						CACHE.delete(pic_id);
+						http_return_json(200);
+					}
+				});
+			} else {
+				http_return_json(405);
+			}
 
-			} else if (action === 'raw') {
+		} else if (request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/thumb$/)) {
 
-				if (request.method === 'GET') {
-					// GET /api/pic/<id>/raw
-					// return raw data file of pic <id>
-					http_return_file(200, pic.path);
-				} else {
-					http_return_json(405);
-				}
+			// /api/pic/<id>/thumb
 
-			} else if (action === 'thumbnail') {
+			let tokens = request.url.match(/^\/api\/pic\/([0-9a-f]{32})\/thumb$/),
+				pic_id = tokens && tokens[1] ? tokens[1] : null,
+				pic = CACHE.get(pic_id);
+			if (!pic) {
+				http_return_json(404);
+				return;
+			}
 
-				if (request.method === 'GET') {
-					// GET /api/pic/<id>/thumbnail
-					// return thumbnail data file of pic <id>
-					const thumb_dir_path = path.normalize(`${PICS_PATH}${path.sep}thumb`);
-					const thumbnail_path = path.normalize(`${thumb_dir_path}${path.sep}${pic.id}.jpeg`);
-					fs.access(thumbnail_path, fs.constants.F_OK, function (error) {
-						if (!error) {
-							http_return_file(200, thumbnail_path);
+			if (request.method === 'GET') {
+				const thumb_dir_path = path.resolve(PICS_PATH, 'thumb');
+				const thumbnail_path = path.resolve(thumb_dir_path, `${pic.id}.jpeg`);
+				fs.access(thumbnail_path, fs.constants.F_OK, function (error) {
+					if (!error) {
+						http_return_file(200, thumbnail_path);
+					} else {
+						if (!FFMPEG_AVAILABLE) {
+							console.error(`Error: cannot access ${thumbnail_path}`, error);
+							http_return_json(404);
+						} else if (pic.ext === '.heic') {
+							http_return_json(404);
 						} else {
-							if (!FFMPEG_AVAILABLE) {
-								console.error(`Error: cannot access ${thumbnail_path}`, error);
-								http_return_json(404);
-							} else if (pic.ext === '.heic') {
-								http_return_json(404);
-							} else {
-								//console.log(`Generating thumbnail ${thumbnail_path}`);
-								/*
-								https://superuser.com/questions/538112/meaningful-thumbnails-for-a-video-using-ffmpeg
-								https://stackoverflow.com/questions/27145238/create-thumbnail-from-video-using-ffmpeg
-								https://superuser.com/questions/602315/ffmpeg-thumbnails-with-exact-size-main-aspect-ratio
-								https://stackoverflow.com/questions/15974243/resize-to-a-specific-width-and-height-using-ffmpeg
-								https://stackoverflow.com/questions/14551102/with-ffmpeg-create-thumbnails-proportional-to-the-videos-ratio/14551281
-								*/
-								//child_process.exec(`ffmpeg -hide_banner -loglevel error -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a)" -frames:v 1 "${thumbnail_path}"`, function (error) {
-								const is_video = ['.webm', '.flv', '.mp4', '.mpg', '.mpeg', '.mov', '.avi'].includes(pic.ext);
-								child_process.exec(`ffmpeg -hide_banner -loglevel error${is_video ? ' -ss 00:00:03 -noaccurate_seek' : ''} -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a),crop=150:150" -frames:v 1 "${thumbnail_path}"`, function (error, stdout, stderr) {
-									if (!error) {
-										http_return_file(200, thumbnail_path);
-									} else {
-										console.error(`Error: cannot create thumbnail`);
-										console.error(error);
-										console.error(stderr);
-										http_return_json(500);
-									}
-								});
-							}
-						}
-					});
-				} else {
-					http_return_json(405);
-				}
-
-			} else if (action === 'edit') {
-
-				if (request.method === 'POST') {
-					// POST /api/pic/<id>/edit
-					// edit pic <id>
-					let body = [];
-					request.on('data', function (chunk) {
-						body.push(chunk);
-					}).on('end', function () {
-						body = JSON.parse(Buffer.concat(body).toString());
-						const file_name = `${pic.id}${body.tags.length > 0 ? ` ${body.tags.sort(tag_sorting).join(' ')}` : ''}${pic.ext}`
-						if (file_name.length > 255) {
-							http_return_json(500);
-						} else if (file_name === path.basename(pic.path)) {
-							http_return_json(304);
-						} else {
-							const original_file_path = path.normalize(pic.path);
-							const new_file_path = path.normalize(`${path.dirname(pic.path)}${path.sep}${file_name}`);
-							fs.rename(original_file_path, new_file_path, function (error) {
-								if (error) {
-									console.error('Error renaming file', error);
-									http_return_json(500);
+							//console.log(`Generating thumbnail ${thumbnail_path}`);
+							/*
+							https://superuser.com/questions/538112/meaningful-thumbnails-for-a-video-using-ffmpeg
+							https://stackoverflow.com/questions/27145238/create-thumbnail-from-video-using-ffmpeg
+							https://superuser.com/questions/602315/ffmpeg-thumbnails-with-exact-size-main-aspect-ratio
+							https://stackoverflow.com/questions/15974243/resize-to-a-specific-width-and-height-using-ffmpeg
+							https://stackoverflow.com/questions/14551102/with-ffmpeg-create-thumbnails-proportional-to-the-videos-ratio/14551281
+							*/
+							//child_process.exec(`ffmpeg -hide_banner -loglevel error -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a)" -frames:v 1 "${thumbnail_path}"`, function (error) {
+							const is_video = ['.webm', '.flv', '.mp4', '.mpg', '.mpeg', '.mov', '.avi'].includes(pic.ext);
+							child_process.exec(`ffmpeg -hide_banner -loglevel error${is_video ? ' -ss 00:00:03 -noaccurate_seek' : ''} -i "${pic.path}" -vf "thumbnail,scale=max(150\\,a*150):max(150\\,150/a),crop=150:150" -frames:v 1 "${thumbnail_path}"`, function (error, stdout, stderr) {
+								if (!error) {
+									http_return_file(200, thumbnail_path);
 								} else {
-									pic.path = new_file_path;
-									pic.tags = body.tags;
-									//console.log(`Renamed file ${original_file_path} -> ${new_file_path}`);
-									http_return_json(200);
+									console.error(`Error: cannot create thumbnail`);
+									console.error(error);
+									console.error(stderr);
+									http_return_json(500);
 								}
 							});
 						}
-					});
-				} else {
-					http_return_json(405);
-				}
+					}
+				});
+			} else {
+				http_return_json(405);
+			}
 
-			} else if (action === 'remove') {
+		} else if (request.url.match(/^\/api\/pic\/[0-9a-f]{32}\/raw$/)) {
 
-				if (request.method === 'POST') {
-					// POST /api/pic/<id>/remove
-					// delete pic <id>
-					const thumbnail_path = path.normalize(`${PICS_PATH}${path.sep}thumb${path.sep}${pic.id}.jpeg`);
-					fs.unlink(thumbnail_path, function (error) {
-						if (error) {
-							//console.error('Error unlinking file thumbnail', error);
-						}
-					});
-					fs.unlink(pic.path, function (error) {
-						if (error) {
-							console.error('Error unlinking file', error);
-							http_return_json(500);
-						} else {
-							delete CACHE.pics[pic_id];
-							http_return_json(200);
-						}
-					});
-				} else {
-					http_return_json(405);
-				}
+			let tokens = request.url.match(/^\/api\/pic\/([0-9a-f]{32})\/raw$/),
+				pic_id = tokens && tokens[1] ? tokens[1] : null,
+				pic = CACHE.get(pic_id);
+			if (!pic) {
+				http_return_json(404);
+				return;
+			}
 
+			if (request.method === 'GET') {
+				// GET /api/pic/<id>/raw
+				// return raw data file of pic <id>
+				http_return_file(200, pic.path);
+			} else {
+				http_return_json(405);
 			}
 
 		} else if (request.url.match(/^\/api\/tag$/)) {
@@ -716,8 +671,7 @@ const server = http.createServer(function (request, response) {
 				// GET /api/tag
 				// return all tags info (without pics list, only count)
 				let map = {};
-				Object.keys(CACHE.pics).forEach(function (pic_id) {
-					let pic = CACHE.pics[pic_id];
+				CACHE.forEach(function (pic, pic_id) {
 					if (pic.tags) {
 						pic.tags.forEach(function (tag_label) {
 							if (map[tag_label]) {
@@ -751,8 +705,7 @@ const server = http.createServer(function (request, response) {
 					http_return_json(404);
 				} else {
 					let filtered_pics = [];
-					Object.keys(CACHE.pics).forEach(function (pic_id) {
-						let pic = CACHE.pics[pic_id];
+					CACHE.forEach(function (pic, pic_id) {
 						if (pic && pic.tags && pic.tags.includes(tag_label)) {
 							filtered_pics.push(pic);
 						}
@@ -766,32 +719,11 @@ const server = http.createServer(function (request, response) {
 							pics: []
 						};
 						filtered_pics.forEach(function (pic) {
-							if (pic.size) {
-								let pic_info = JSON.parse(JSON.stringify(pic));
-								delete pic_info.path;
-								tag_info.pics.push(pic_info);
-							} else {
-								//console.log(`Getting stat of file ${pic.path}`);
-								fs.stat(pic.path, function (error, stats) {
-									if (!error) {
-										pic.size = stats.size;
-										//pic.atime = stats.atimeMs;
-										pic.mtime = stats.mtimeMs;
-										//pic.ctime = stats.ctimeMs;
-										pic.birthtime = stats.birthtimeMs;
-									}
-									let pic_info = JSON.parse(JSON.stringify(pic));
-									delete pic_info.path;
-									tag_info.pics.push(pic_info);
-									if (tag_info.pics.length === filtered_pics.length) {
-										http_return_json(200, tag_info);
-									}
-								});
-							}
+							let pic_info = JSON.parse(JSON.stringify(pic));
+							delete pic_info.path;
+							tag_info.pics.push(pic_info);
 						});
-						if (tag_info.pics.length === filtered_pics.length) {
-							http_return_json(200, tag_info);
-						}
+						http_return_json(200, tag_info);
 					}
 				}
 			} else {
@@ -804,6 +736,7 @@ const server = http.createServer(function (request, response) {
 				// POST /api/rehash
 				// rehash and remix entire database
 				rehash(get_files_list());
+				CACHE.clear();
 				CACHE = get_cache(get_files_list());
 				http_return_json(200);
 			} else {

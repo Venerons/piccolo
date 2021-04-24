@@ -634,7 +634,7 @@
 								}
 								$item.append(element);
 							};
-							thumbnail.src = `/api/pic/${pic.id}/thumbnail`;
+							thumbnail.src = `/api/pic/${pic.id}/thumb`;
 							// Stop watching and load the image
 							self.unobserve(entry.target);
 						}
@@ -787,8 +787,8 @@
 
 		var delete_pic = function (pic) {
 			if (confirm('Are you sure to delete this image?')) {
-				fetch(`/api/pic/${pic.id}/remove`, {
-					method: 'POST',
+				fetch(`/api/pic/${pic.id}`, {
+					method: 'DELETE',
 					headers: window.authorization ? { 'Authorization': window.authorization } : undefined
 				}).then(function (response) {
 					if (!response.ok) {
@@ -1012,7 +1012,7 @@
 				} else {
 					pic.tags.push('favorite');
 				}
-				fetch(`/api/pic/${pic.id}/edit`, {
+				fetch(`/api/pic/${pic.id}`, {
 					method: 'POST',
 					headers: window.authorization ? { 'Authorization': window.authorization } : undefined,
 					body: JSON.stringify({ tags: pic.tags })
@@ -1051,7 +1051,7 @@
 								pic.tags.push(tag);
 							}
 						});
-						fetch(`/api/pic/${pic.id}/edit`, {
+						fetch(`/api/pic/${pic.id}`, {
 							method: 'POST',
 							headers: window.authorization ? { 'Authorization': window.authorization } : undefined,
 							body: JSON.stringify({ tags: pic.tags })
