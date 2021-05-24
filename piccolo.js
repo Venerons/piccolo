@@ -341,7 +341,6 @@ try {
 	fs.mkdirSync(path.resolve(PICS_PATH, 'thumb'), { recursive: true });
 }
 var CACHE = get_cache(get_files_list());
-var RANDOM_CACHE = new Set();
 
 /*
 fs.writeFile('/tmp/piccolo.cache', JSON.stringify(CACHE), function (error) {
@@ -484,31 +483,11 @@ const server = http.createServer(function (request, response) {
 
 			if (request.method === 'GET') {
 				const pics_list = Array.from(CACHE.keys());
-				let pic_id = null;
-				while (!pic_id || RANDOM_CACHE.has(pic_id)) {
-					pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
-				}
-				RANDOM_CACHE.add(pic_id);
+				let pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
 				const pic = CACHE.get(pic_id);
-				if (pic.size) {
-					let pic_info = JSON.parse(JSON.stringify(pic));
-					delete pic_info.path;
-					http_return_json(200, pic_info);
-				} else {
-					//console.log(`Getting stat of file ${pic.path}`);
-					fs.stat(pic.path, function (error, stats) {
-						if (!error) {
-							pic.size = stats.size;
-							//pic.atime = stats.atimeMs;
-							pic.mtime = stats.mtimeMs;
-							//pic.ctime = stats.ctimeMs;
-							pic.birthtime = stats.birthtimeMs;
-						}
-						let pic_info = JSON.parse(JSON.stringify(pic));
-						delete pic_info.path;
-						http_return_json(200, pic_info);
-					});
-				}
+				let pic_info = JSON.parse(JSON.stringify(pic));
+				delete pic_info.path;
+				http_return_json(200, pic_info);
 			} else {
 				http_return_json(405);
 			}
@@ -526,25 +505,9 @@ const server = http.createServer(function (request, response) {
 			}
 
 			if (request.method === 'GET') {
-				if (pic.size) {
-					let pic_info = JSON.parse(JSON.stringify(pic));
-					delete pic_info.path;
-					http_return_json(200, pic_info);
-				} else {
-					//console.log(`Getting stat of file ${pic.path}`);
-					fs.stat(pic.path, function (error, stats) {
-						if (!error) {
-							pic.size = stats.size;
-							//pic.atime = stats.atimeMs;
-							pic.mtime = stats.mtimeMs;
-							//pic.ctime = stats.ctimeMs;
-							pic.birthtime = stats.birthtimeMs;
-						}
-						let pic_info = JSON.parse(JSON.stringify(pic));
-						delete pic_info.path;
-						http_return_json(200, pic_info);
-					});
-				}
+				let pic_info = JSON.parse(JSON.stringify(pic));
+				delete pic_info.path;
+				http_return_json(200, pic_info);
 			} else if (request.method === 'POST') {
 				let body = [];
 				request.on('data', function (chunk) {
@@ -573,9 +536,6 @@ const server = http.createServer(function (request, response) {
 					}
 				});
 			} else if (request.method === 'DELETE') {
-				if (RANDOM_CACHE.has(pic.id)) {
-					RANDOM_CACHE.delete(pic.id);
-				}
 				const thumbnail_path = path.resolve(PICS_PATH, 'thumb', `${pic.id}.jpeg`);
 				fs.unlink(thumbnail_path, function (error) {
 					if (error) {

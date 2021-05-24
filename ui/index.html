@@ -532,12 +532,14 @@
 					$('#splash-password').prop('hidden', false);
 				} else {
 					const error = `HTTP Error ${response.status}: ${response.statusText}`;
-					console.error(error);
-					error_message(error);
+					throw new Error(error);
 				}
 			} else {
 				$('#splash-loading').prop('hidden', true);
 			}
+		}).catch(function (error) {
+			console.error(error);
+			error_message(error.message);
 		});
 
 		$('#piccolo-password').on('keydown', function(e) {
@@ -549,17 +551,19 @@
 					headers: { 'Authorization': authorization },
 				}).then(function (response) {
 					if (!response.ok) {
-						const error = `HTTP Error ${response.status}: ${response.statusText}`;
-						console.error(error);
-						error_message(error);
 						if (response.status === 401) {
 							$('#piccolo-password').val('');
 						}
+						const error = `HTTP Error ${response.status}: ${response.statusText}`;
+						throw new Error(error);
 					} else {
 						window.authorization = authorization;
 						$('#piccolo-password').val('');
 						$('#splash-password').prop('hidden', true);
 					}
+				}).catch(function (error) {
+					console.error(error);
+					error_message(error.message);
 				});
 			}
 		});
@@ -714,37 +718,14 @@
 			}).then(function (response) {
 				if (!response.ok) {
 					const error = `HTTP Error ${response.status}: ${response.statusText}`;
-					console.error(error);
-					error_message(error);
+					throw new Error(error);
 				}
 				return response.json();
 			}).then(function (data) {
 				render_pic(data, true);
-				/*
-				$('.page').prop('hidden', true);
-				let $page_pics = $('#main-page-pics');
-				$page_pics.empty();
-				data.pics.sort(function (a, b) {
-					if (a.birthtime > b.birthtime) {
-						return -1;
-					} else if (a.birthtime < b.birthtime) {
-						return 1;
-					} else if (a.mtime > b.mtime) {
-						return -1;
-					} else if (a.mtime < b.mtime) {
-						return 1;
-					} else {
-						return 0;
-					}
-				}).forEach(function (pic) {
-					const $item = $(`<div data-action="pic" data-pic="${pic.id}" title="${get_pic_tooltip(pic)}" class="pic-preview"><div class="pic-preview-tip">${pic.ext.substring(1)}</div></div>`);
-					$item.data('pic', pic);
-					observer.observe($item[0]);
-					$page_pics.append($item);
-				});
-				$page_pics.data('pics', data.pics);
-				$page_pics.prop('hidden', false);
-				*/
+			}).catch(function (error) {
+				console.error(error);
+				error_message(error.message);
 			});
 		};
 
@@ -793,8 +774,7 @@
 				}).then(function (response) {
 					if (!response.ok) {
 						const error = `HTTP Error ${response.status}: ${response.statusText}`;
-						console.error(error);
-						error_message(error);
+						throw new Error(error);
 					}
 					let $splash_pic = $('#splash-pic');
 					if ($splash_pic.data('random_mode')) {
@@ -822,6 +802,9 @@
 							}
 						}
 					}
+				}).catch(function (error) {
+					console.error(error);
+					error_message(error.message);
 				});
 			}
 		};
@@ -913,8 +896,7 @@
 				}).then(function (response) {
 					if (!response.ok) {
 						const error = `HTTP Error ${response.status}: ${response.statusText}`;
-						console.error(error);
-						error_message(error);
+						throw new Error(error);
 					}
 					return response.json();
 				}).then(function (data) {
@@ -927,6 +909,9 @@
 					});
 					$('#main-page-tags-filter').trigger('input');
 					$page_tags.prop('hidden', false);
+				}).catch(function (error) {
+					console.error(error);
+					error_message(error.message);
 				});
 
 			} else if (action === 'tag') {
@@ -941,8 +926,7 @@
 				}).then(function (response) {
 					if (!response.ok) {
 						const error = `HTTP Error ${response.status}: ${response.statusText}`;
-						console.error(error);
-						error_message(error);
+						throw new Error(error);
 					}
 					return response.json();
 				}).then(function (data) {
@@ -966,6 +950,9 @@
 					});
 					$page_pics.data('pics', data.pics);
 					$page_pics.prop('hidden', false);
+				}).catch(function (error) {
+					console.error(error);
+					error_message(error.message);
 				});
 
 			} else if (action === 'pic') {
@@ -984,10 +971,12 @@
 					}).then(function (response) {
 						if (!response.ok) {
 							const error = `HTTP Error ${response.status}: ${response.statusText}`;
-							console.error(error);
-							error_message(error);
+							throw new Error(error);
 						}
 						$splash_loading.prop('hidden', true);
+					}).catch(function (error) {
+						console.error(error);
+						error_message(error.message);
 					});
 				}
 
@@ -1019,11 +1008,13 @@
 				}).then(function (response) {
 					if (!response.ok) {
 						const error = `HTTP Error ${response.status}: ${response.statusText}`;
-						console.error(error);
-						error_message(error);
+						throw new Error(error);
 					} else {
 						render_pic(pic, $splash_pic.data('random_mode'));
 					}
+				}).catch(function (error) {
+					console.error(error);
+					error_message(error.message);
 				});
 
 			} else if (action === 'pic-edit') {
@@ -1058,11 +1049,13 @@
 						}).then(function (response) {
 							if (!response.ok) {
 								const error = `HTTP Error ${response.status}: ${response.statusText}`;
-								console.error(error);
-								error_message(error);
+								throw new Error(error);
 							} else {
 								render_pic(pic, $splash_pic.data('random_mode'));
 							}
+						}).catch(function (error) {
+							console.error(error);
+							error_message(error.message);
 						});
 					});
 					$splash_pic.append($dialog);
