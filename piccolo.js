@@ -483,7 +483,8 @@ const server = http.createServer(function (request, response) {
 
 			if (request.method === 'GET') {
 				const pics_list = Array.from(CACHE.keys());
-				let pic_id = pics_list[Math.floor(Math.random() * pics_list.length)];
+				const random_int = crypto.randomInt(0, pics_list.length);
+				let pic_id = pics_list[random_int];
 				const pic = CACHE.get(pic_id);
 				let pic_info = JSON.parse(JSON.stringify(pic));
 				delete pic_info.path;
